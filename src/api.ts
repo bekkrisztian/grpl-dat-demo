@@ -117,16 +117,23 @@ export const findVehicles = (criteria: Criteria, limit = 100) => request<Vehicle
   },
 });
 
-export const fuzzySearchVehicles = (text: string, criteria: Criteria, limit = 100) => {
+const byLabel = (left: Vehicle, right: Vehicle) =>
+  (left.hstb ?? "").localeCompare(right.hstb ?? "")
+  || (left.htb ?? "").localeCompare(right.htb ?? "")
+  || (left.utb ?? "").localeCompare(right.utb ?? "");
+
+export const fuzzySearchVehicles = async (text: string, criteria: Criteria, limit = 100) => {
   const conditions: Record<string, unknown>[] = [
     { globalSearch: { like: `%${text.trim()}%` } },
     ...Object.entries(whereFromCriteria(criteria)).map(([key, value]) => ({ [key]: value })),
   ];
-  return request<Vehicle[]>("/datecode2s", {
+  // A leading wildcard cannot use an index, so ordering in the database makes
+  // it sort every match before the limit applies. Order the page here instead.
+  const rows = await request<Vehicle[]>("/datecode2s", {
     filter: {
       where: conditions.length === 1 ? conditions[0] : { and: conditions },
-      order: ["hstb ASC", "htb ASC", "utb ASC"],
       limit,
     },
   });
+  return rows.sort(byLabel);
 };
