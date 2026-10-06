@@ -146,3 +146,4 @@ grapi/controllers/index.ts
 
 # test results
 test-results/*
+playwright-report/
