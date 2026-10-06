@@ -59,13 +59,26 @@ const compact = <T extends Option>(items: T[]) => items.filter(
 
 export const emptyCriteria = (): Criteria => ({ fza: "", hst: "", otg: "", ht: "", ut: "" });
 
-export const loadVehicleTypes = async (): Promise<Option[]> => [
+// Used when the generated controller is unavailable: a SQL controller whose
+// query carries no ${...} placeholder generates an undecorated parameter and
+// fails with 500, which is why this one filters on a wildcard.
+const KNOWN_VEHICLE_TYPES: Option[] = [
   { value: "1", label: "Pkw, SUV, Kleintransporter" },
   { value: "2", label: "Transporter" },
   { value: "3", label: "Kraftrad" },
   { value: "4", label: "Lastkraftwagen" },
   { value: "5", label: "Omnibus" },
 ];
+
+export const loadVehicleTypes = async (): Promise<Option[]> => {
+  try {
+    const options = await sqlOptions("/vehicleTypes", { FZA: "%" }, "FZA", "FZAB");
+    if (options.length) return options;
+  } catch {
+    // fall through to the known categories
+  }
+  return KNOWN_VEHICLE_TYPES;
+};
 
 const sqlOptions = async (
   path: string,

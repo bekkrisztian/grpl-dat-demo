@@ -16,12 +16,60 @@
     type Vehicle,
   } from "./api";
 
-  type View = "tree" | "fuzzy";
+  type View = "tree" | "fuzzy" | "browse";
 
   let view: View = "tree";
   let vehicleTypes: Option[] = [];
   let initialLoading = true;
   let startupError = "";
+
+  // The generated gruim admin module for the discovered datecode2 table. It is
+  // loaded on demand so the search screens work without the remote.
+  let BrowseAdmin: any = null;
+  let browseLoading = false;
+  let browseError = "";
+
+  const browseSchema = {
+    "field-properties": {
+      "field-order": [
+        "dateCode", "fzab", "hstb", "otgb", "htb", "utb",
+        "avMoB", "ccm", "kw", "antr", "ab",
+      ],
+      "hidden-fields": [
+        "fza", "hst", "ht", "ut", "otg", "avMo", "avKa", "avGe",
+        "aZyl", "ats", "rSt", "kSt", "kZbewert", "kZkalk", "kzGlas",
+        "globalSearch",
+      ],
+    },
+  };
+
+  const browseTranslations = {
+    dateCode: "Date code",
+    fzab: "Vehicle type",
+    hstb: "Manufacturer",
+    otgb: "Model range",
+    htb: "Model group",
+    utb: "Model",
+    avMoB: "Engine",
+    ccm: "Displacement",
+    kw: "Power (kW)",
+    antr: "Drive",
+    ab: "Body",
+  };
+
+  const openBrowse = async () => {
+    view = "browse";
+    if (BrowseAdmin || browseLoading) return;
+    browseLoading = true;
+    browseError = "";
+    try {
+      BrowseAdmin = (await import("App/Datecode2")).default;
+    } catch (error) {
+      browseError = message(error);
+    } finally {
+      browseLoading = false;
+    }
+  };
 
   let treeCriteria = emptyCriteria();
   let treeBrands: Option[] = [];
@@ -162,6 +210,7 @@
     <nav class="mb-8 flex gap-2" aria-label="Search modes">
       <button class="rounded-lg px-4 py-2 text-sm font-semibold {view === 'tree' ? 'bg-blue-700 text-white' : 'bg-white text-slate-700 shadow-sm'}" on:click={() => view = "tree"}>Search tree</button>
       <button class="rounded-lg px-4 py-2 text-sm font-semibold {view === 'fuzzy' ? 'bg-blue-700 text-white' : 'bg-white text-slate-700 shadow-sm'}" on:click={() => view = "fuzzy"}>Fuzzy search</button>
+      <button class="rounded-lg px-4 py-2 text-sm font-semibold {view === 'browse' ? 'bg-blue-700 text-white' : 'bg-white text-slate-700 shadow-sm'}" on:click={openBrowse}>Browse data</button>
     </nav>
 
     {#if startupError}
@@ -193,7 +242,7 @@
           <VehicleTable vehicles={treeResults} />
         </div>
       </section>
-    {:else}
+    {:else if view === "fuzzy"}
       <section aria-labelledby="fuzzy-title">
         <div class="mb-6">
           <h2 id="fuzzy-title" class="text-2xl font-bold">Fuzzy vehicle search</h2>
@@ -221,6 +270,22 @@
           {#if fuzzyResults.length}<p class="mb-3 text-sm font-medium text-slate-600">{fuzzyResults.length} vehicle{fuzzyResults.length === 1 ? "" : "s"} shown</p>{/if}
           <VehicleTable vehicles={fuzzyResults} />
         </div>
+      </section>
+    {:else}
+      <section aria-labelledby="browse-title">
+        <div class="mb-6">
+          <h2 id="browse-title" class="text-2xl font-bold">All DAT vehicles</h2>
+          <p class="mt-1 text-slate-600">The full datecode2 table through the generated Grapple admin module, with filtering and paging.</p>
+        </div>
+        {#if browseLoading}
+          <p class="rounded-lg bg-white p-6 text-center text-slate-500">Loading the generated module…</p>
+        {:else if browseError}
+          <p role="alert" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            The generated module could not be loaded: {browseError}. It is served by gruim, so this tab only works in a Grapple deployment.
+          </p>
+        {:else if BrowseAdmin}
+          <svelte:component this={BrowseAdmin} schema={browseSchema} translations={browseTranslations} enableFilter={true} enableClearFilter={true} enableLoadMore={true} />
+        {/if}
       </section>
     {/if}
   </div>
