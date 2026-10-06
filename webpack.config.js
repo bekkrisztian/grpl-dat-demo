@@ -80,9 +80,9 @@ module.exports = {
     new ModuleFederationPlugin({
       name: "client",
       filename: "remoteEntry.js",
-      remotes: process.env.CONTAINER_NAME && process.env.SVELTE_APP_REMOTE_URL
-        ? { App: `${process.env.CONTAINER_NAME}@${process.env.SVELTE_APP_REMOTE_URL}/remoteEntry.js` }
-        : {},
+      remotes: {
+        App: `${process.env.CONTAINER_NAME}@${process.env.SVELTE_APP_REMOTE_URL}/remoteEntry.js`,
+      },
       exposes: {},
       shared: {
         svelte: {

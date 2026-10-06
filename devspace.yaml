@@ -152,7 +152,19 @@ dev:
     labelSelector:
       app.kubernetes.io/name: gruim
       grpl.io/resourceName: ${APP_NAME}-gras-gruim
-    devImage: grpl/gruim:0.3.61
+    devImage: grpl/gruim:0.3.62
+    # The -img deployment starts nginx on a prebuilt image. The dev image has no
+    # assets, so build them here and run the dev server instead.
+    command:
+      - sh
+      - -c
+      - |
+        ./rebuild-assets.sh &&
+        mkdir -p /tmp/devspace-custom-components ./src/lib/custom-components &&
+        cp -R /tmp/devspace-custom-components/. ./src/lib/custom-components/ &&
+        test -f ./src/lib/custom-components/list.json || printf '[]\n' > ./src/lib/custom-components/list.json &&
+        ./rebuild-assets/sync.sh &&
+        pnpm dev
     env:
       - name: DEV
         value: "true"
@@ -162,7 +174,12 @@ dev:
       - name: NODE_OPTIONS
         value: "--dns-result-order=ipv4first"
     sync:
-      - path: ./grases/gras/gruim/custommodules/.:/usr/src/app/src/lib/custom-components/.
+      - path: ./grases/gras/gruim/custommodules/.:/tmp/devspace-custom-components/.
+        disableDownload: true
+        initialSync: mirrorLocal
+        startContainer: true
+        excludePaths:
+          - README.md
         # - name: OPENAPI_URL
         #   value: "http://dev-app-grapi.grpl-cli.grapple-demo.com/openapi.json"
     # restartHelper:
@@ -191,28 +208,6 @@ dev:
     sync:
       # - path: ./grapi/controllers/:/home/node/app/src/controllers/
       - path: ./grases/gras/grapi/injections/:/home/node/app/src/injections/
-      - path: ./grases/gras/grapi/modules/:/opt/custom-modules/gras/
-        excludePaths:
-          - "**/node_modules/"
-          - "**/index.js"
-          - "**/index.d.ts"
-          - "**/package.json"
-          - "**/package-lock.json"
-        onUpload:
-          exec:
-            - command: bash
-              args:
-                - -c
-                - |
-                  echo "Re-installing modules after sync..."
-                  # Extract and decode the install-modules prepatch from env var
-                  INSTALL_MODULES_SCRIPT=$(echo "$PrePatches" | tr "|" "\n" | grep "^install-modules:" | cut -d: -f2 | base64 -d)
-                  # Modify the script to use the correct path for gras
-                  MODIFIED_SCRIPT=$(echo "$INSTALL_MODULES_SCRIPT" | sed 's|MODULES_DIR="/opt/custom-modules"|MODULES_DIR="/opt/custom-modules/gras"|')
-                  # Execute the modified script
-                  echo "$MODIFIED_SCRIPT" | bash
-                  echo "Modules re-installed. Restarting app..."
-                  pkill -f "node ." || true
     # restartHelper:
     #   inject: true
     #   path: "export DEV=true && ./start.sh"

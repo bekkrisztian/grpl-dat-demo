@@ -20,6 +20,7 @@ metadata:
 type: Opaque
 stringData:
   SQLController: >-
+    vehicleTypes:{"query":"select FZA, FZAB from dsearchtree.datecode2 where FZA like \"${FZA}\" group by FZA, FZAB order by FZA;","path":"vehicleTypes","controllerName":"vehicleTypes"}|
     brandsByVehicleType:{"query":"select FZA, HST, HSTB from dsearchtree.datecode2 where FZA = \"${FZA}\" group by FZA, HST, HSTB order by FZA, HSTB;","path":"brandsByVehicleType","controllerName":"brandsByVehicleType"}|
     modelRangeByVehicleTypeAndManufacturer:{"query":"select FZA, HST, HSTB, OTG, OTGB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" group by FZA, HST, HSTB, OTG, OTGB order by FZA, OTGB;","path":"modelRangeByVehicleTypeAndManufacturer","controllerName":"modelRangeByVehicleTypeAndManufacturer"}|
     modelGroupByVehicleTypeAndManufacturerAndModelRange:{"query":"select FZA, HST, HSTB, OTG, OTGB, HT, HTB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" and OTG = \"${OTG}\" group by FZA, HST, HSTB, OTG, OTGB, HT, HTB order by FZA, HSTB, OTGB;","path":"modelGroupByVehicleTypeAndManufacturerAndModelRange","controllerName":"modelGroupByVehicleTypeAndManufacturerAndModelRange"}|

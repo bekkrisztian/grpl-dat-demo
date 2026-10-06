@@ -7,6 +7,7 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - Cascading vehicle search: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
+- A browse tab that embeds the generated gruim admin module for `datecode2`
 
 The demo contains both requested screens and talks directly to the DAT layer-one
 LoopBack API. Only the API endpoints used by the screens are generated.
@@ -57,17 +58,30 @@ The DAT API is available at <http://localhost:3333> and the demo UI at
 <http://localhost:4000>. The first API startup generates the LoopBack models and
 controllers and can take approximately two minutes.
 
-The cache proxy and Gruim containers from the original setup are intentionally
-not required: this custom UI consumes the layer-one OpenAPI directly. This also
-avoids the unavailable external Redis host from the original commands.
+The layer-two cache proxy from the original setup is not required: the measured
+endpoints answer in well under half a second, and its Redis host no longer
+resolves. Bring it back only for the MCP endpoint it also provided, and point it
+at an in-cluster Redis rather than the retired external one.
+
+Gruim is used for the browse tab, which loads `App/Datecode2` over module
+federation. The two search screens do not need it, so the module is imported on
+demand and the tab explains itself when the remote is absent, as in local Docker
+runs.
 
 ## API behavior
 
-The generated `/vehicleTypes` controller in `grpl/loopback:0.4.25` fails when
-called without parameters. The UI therefore uses the five verified DAT FZA categories
-directly. Fuzzy search uses a database-side, limited
-`globalSearch LIKE` query; the generated fuzzy endpoint is not used because an
-unfiltered request loads the full data set into memory.
+In `grpl/loopback:0.4.25`, a SQL controller whose query carries no `${...}`
+placeholder generates a method parameter that is never decorated for dependency
+injection, so every request fails with 500. This affects `vehicleTypes`,
+`brands`, `modelRangeByVehicleType`, `gearboxTypes` and `bodyTypes` from the
+original command, while every parameterised controller works. The chart
+therefore declares `vehicleTypes` with a `FZA like "${FZA}"` filter and the UI
+calls it with `%`; it falls back to the five known DAT categories if the call
+still fails.
+
+Fuzzy search uses a database-side, limited `globalSearch LIKE` query; the
+generated fuzzy endpoint is not used because an unfiltered request loads the
+full data set into memory.
 
 Fuzzy results are ordered in the client. A leading wildcard cannot use an index,
 so ordering in the database makes MySQL sort every match before the limit

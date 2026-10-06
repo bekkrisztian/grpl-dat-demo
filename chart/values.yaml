@@ -20,11 +20,6 @@ grases:
       runimages:
         image: grpl/loopback
         tag: "0.4.25"
-      buildimages:
-        enabled: true
-        tag: 0.0.1
-      deployimages:
-        enabled: true
       discoveredrepos: true
       ingress: true
       ssl: true
@@ -68,17 +63,27 @@ grases:
       prerelationpatches: []
       prepatches: []
       prediscoverypatches: []
-      initContainers: []
+      initContainers:
+        - name: init-modules
+          spec:
+            name: init-modules
+            image: grpl/grpl-dat-demo-modules:dev
+            imagePullPolicy: Always
+            command: ["/bin/sh", "-c", "cp -r /modules/gras/. /opt/custom-modules/ && chown -R 1000:1000 /opt/custom-modules || true"]
+            volumeMounts:
+              - name: custom-modules
+                mountPath: /opt/custom-modules
+      volumeMounts:
+        - name: custom-modules
+          mountPath: /opt/custom-modules
+      volumes:
+        - name: custom-modules
+          emptyDir: {}
     gruim:
       name: dat-demo
       runimages:
         image: grpl/gruim
-        tag: "0.3.61"
-      buildimages:
-        enabled: true
-        tag: 0.0.1
-      deployimages:
-        enabled: true
+        tag: "0.3.62"
       ssl: true
       sslissuer: letsencrypt-grapple-demo
       autoscaling:
