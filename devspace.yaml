@@ -1,8 +1,8 @@
 version: v2beta1
-name: grapple-template
+name: grpl-dat-demo
 vars:
   IMAGE_REGISTRY: "grpl"
-  IMAGE_REPO: "grapple-template"
+  IMAGE_REPO: "grpl-dat-demo"
   
   APP_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}"
   TEST_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}-test"
