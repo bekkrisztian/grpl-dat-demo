@@ -1,0 +1,26 @@
+env:
+- name: DEV
+  value: "true"
+
+grases:
+  gras:
+    # gras: 
+    #   ssl: false
+    grapi:
+      ssl: false
+      dev: true
+    gruim:
+      ssl: false
+      dev: true
+
+
+ingress:
+  enabled: true
+  hosts:
+    - host: myapp.test
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+stage: dev

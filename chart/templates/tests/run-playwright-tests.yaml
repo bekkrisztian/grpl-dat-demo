@@ -1,0 +1,61 @@
+{{- $fullName := include "myapp.fullname" . -}}
+{{- $prot := "http://" -}}
+{{ if .Values.ingress.ssl }}
+  {{- $prot = "https://" -}}
+{{ end}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "myapp.fullname" . }}-run-playwright-tests"
+  labels:
+    {{- include "myapp.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  initContainers:
+    - name: {{ .Chart.Name }}-init
+      image: "nicolaka/netshoot"
+      imagePullPolicy: {{ .Values.image.pullPolicy }}
+      env:
+        {{- if .Values.lookup.enabled }}
+        {{- $secret := (lookup "v1" "Secret" "grpl-system" "grsf-config" ) }}
+        - name: BASE_URL
+          value: "{{ $prot }}{{ .Release.Namespace }}-{{ $fullName }}.{{ index $secret.data "GRAPPLE_DNS" | b64dec }}"
+        {{- else }}
+        - name: BASE_URL
+          value: "{{ $prot }}{{ .Release.Namespace }}-{{ $fullName }}.{{ .Values.lookup.domain }}"
+        {{- end }}
+      command: 
+        - sh
+        - -c
+        - |
+          while ! curl -k -Is ${BASE_URL}/admin 2>/dev/null | head -1 | grep 200; do
+              sleep 1
+              echo -n '.'
+          done
+  containers:
+    - name: playwright
+      image: "{{ .Values.imagetest.repository }}:{{ .Values.imagetest.tag | default .Chart.AppVersion }}"
+      imagePullPolicy: {{ .Values.imagetest.pullPolicy }}
+      env:
+        {{- if .Values.lookup.enabled }}
+        {{- $secret := (lookup "v1" "Secret" "grpl-system" "grsf-config" ) }}
+        - name: BASE_URL
+          value: "{{ $prot }}{{ .Release.Namespace }}-{{ $fullName }}.{{ index $secret.data "GRAPPLE_DNS" | b64dec }}"
+        {{- else }}
+        - name: BASE_URL
+          value: "{{ $prot }}{{ .Release.Namespace }}-{{ $fullName }}.{{ .Values.lookup.domain }}"
+        {{- end }}
+        {{- if .Values.env }}
+        {{- toYaml .Values.env | nindent 8 }}
+        {{- end }}
+      command: 
+        - sh
+        - -c
+        - |
+          # Run Playwright tests
+          echo "Running Playwright tests..."
+          export HEADLESS='true'
+          npx playwright test --trace retain-on-first-failure --reporter=json
+      args: ['{{ include "myapp.fullname" . }}:{{ .Values.service.port }}']
+  restartPolicy: Never

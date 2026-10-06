@@ -1,0 +1,658 @@
+---
+version: '3'
+silent: true
+
+vars:
+  VALUES_YAML_PATH: "chart/values.yaml"
+  APP_NAME: "app"
+  BITBUCKET_PATH: "app"
+  GRAPI_INJECTION_FOLDER: "grapi"
+  GRUIM_INJECTION_FOLDER: "gruim"
+  BASE: "gras"
+  CHART_FOLDER: "./chart"
+  CHART_NAME: # use the current folder as the chart name
+    sh: if [ "$(echo ${PWD##*/})" != "build" ]; then echo ${PWD##*/}; else echo ${PROJECT_NAME_SHORT}; fi
+  CHART_NAME_SHORT: # use the current folder as the chart name
+    sh: |
+        string="$(if [ "$(echo ${PWD##*/})" != "build" ]; then echo ${PWD##*/}; else echo ${PROJECT_NAME_SHORT}; fi)"
+        string="${string//[.\']/}"
+        string="${string//[!a-zA-Z ]/ }"
+        acronym=''
+        for word in ${string}
+        do
+          acronym+="${word:0:4}"
+        done
+        echo "$acronym"
+  VERSION_FILE: "version.txt" 
+  CURRENT_VERSION:
+    sh: |
+        # Check if version file exists
+        if [ ! -f "{{.CHART_FOLDER}}/{{.VERSION_FILE}}" ]; then
+          # If version file does not exist, create it with initial version 0.1.0
+          echo "0.1.0" > {{.CHART_FOLDER}}/{{.VERSION_FILE}}
+        fi
+        CURRENT_VERSION=$(cat {{.CHART_FOLDER}}/{{.VERSION_FILE}})
+        echo ${CURRENT_VERSION}
+  STAGE: '{{.STAGE | default "prd"}}'
+  GIT_HASH:
+    sh: git log -n 1 --format=%h
+  RANDOM: "9999"
+    # sh: echo {{randInt 10000 100000}} # doesn't work - different on every occurrence
+  PR_NR:
+    sh: |
+      if [ "${BITBUCKET_PR_ID}" != "" ]; then
+        echo ${BITBUCKET_PR_ID}
+      else
+        echo {{.RANDOM}}
+      fi
+  IMAGE_REGISTRY: '{{.IMAGE_REGISTRY | default "grpl"}}'
+  IMAGE_REPO:
+    sh: |
+        if [ "{{.STAGE}}" != "prd" ]; then
+          IMAGE_REPO_EXT="-{{.STAGE}}"
+        fi
+        if [ "{{.IMAGE_REPO}}" = "" ]; then
+          echo "{{.CHART_NAME}}${IMAGE_REPO_EXT}"
+        else
+          echo "{{.IMAGE_REPO}}${IMAGE_REPO_EXT}"
+        fi
+  NS_EXT:
+    sh: |
+        if [ "{{.STAGE}}" = "prd" ]; then
+          echo ""
+        elif [ "{{.STAGE}}" = "nop" ]; then
+          echo "-{{.STAGE}}"
+        elif [ "{{.STAGE}}" = "pr" ]; then
+          echo "-{{.STAGE}}-{{.PR_NR}}"
+        else
+          echo "-{{.STAGE}}"
+        fi
+  NS:
+    sh: |
+        if [ "{{.STAGE}}" = "prd" ]; then
+          echo "{{.CHART_NAME}}" | head -c 10
+        else
+          echo -n "{{.CHART_NAME_SHORT}}" | head -c 10 | cat - <(echo "{{.NS_EXT}}")
+        fi
+  TAG_EXT:
+    sh: |
+        if [ "{{.STAGE}}" = "prd" ]; then
+          echo ""
+        elif [ "{{.STAGE}}" = "nop" ]; then
+          echo ".{{.STAGE}}"
+        elif [ "{{.STAGE}}" = "pr" ]; then
+          echo ".{{.STAGE}}-{{.PR_NR}}"
+        else
+          echo ".{{.STAGE}}"
+        fi
+  TAG:
+    sh: |
+        if [ "{{.STAGE}}" = "prd" ]; then
+          echo "{{.CURRENT_VERSION}}"
+        else
+          echo "{{.CURRENT_VERSION}}{{.TAG_EXT}}"
+        fi
+  SEMVER_EXT:
+    sh: |
+        if [ "{{.STAGE}}" = "prd" ]; then
+          echo ""
+        elif [ "{{.STAGE}}" = "nop" ]; then
+          echo "-{{.STAGE}}{{.GIT_HASH}}"
+        elif [ "{{.STAGE}}" = "pr" ]; then
+          echo "-{{.STAGE}}{{.PR_NR}}"
+        else
+          echo "-{{.STAGE}}"
+        fi
+  SEMVER:
+    sh: |
+        if [ "{{.STAGE}}" = "prd" ]; then
+          echo "{{.CURRENT_VERSION}}"
+        else
+          echo "{{.CURRENT_VERSION}}{{.SEMVER_EXT}}"
+        fi
+  AWS_REGION: "us-east-1"
+  AWS_USERNAME: "AWS"
+  AWS_REPO_URL: "oci://public.ecr.aws/p7h7z5g3"
+  REGISTRY: "public.ecr.aws"
+
+env:
+  OSTYPE:
+    sh: bash -c 'echo $OSTYPE'
+
+tasks:
+
+  build-images:
+    desc: Build the images
+    cmds:
+      - |
+        yq e -i '.vars.IMAGE_REGISTRY = "{{.IMAGE_REGISTRY}}"' devspace.yaml
+        yq e -i '.vars.IMAGE_REPO = "{{.IMAGE_REPO}}"' devspace.yaml
+        devspace build --skip-push --tag {{.TAG}} -n default --no-warn
+
+  build-and-push-images:
+    desc: Build the images
+    cmds:
+      - |
+        yq e -i '.vars.IMAGE_REGISTRY = "{{.IMAGE_REGISTRY}}"' devspace.yaml
+        yq e -i '.vars.IMAGE_REPO = "{{.IMAGE_REPO}}"' devspace.yaml
+        devspace build --tag {{.TAG}} -n default --no-warn
+
+  build-images-local:
+    desc: Build the images
+    vars:
+      STAGE:
+        sh: if [ "{{.STAGE}}" = "prd" ]; then echo "dev"; else echo "{{.STAGE}}"; fi
+      TAG:
+        sh: if [ "{{.STAGE}}" = "dev" ]; then echo "{{.CURRENT_VERSION}}.{{.STAGE}}"; else echo "{{.TAG}}"; fi
+    cmds:
+      - |
+        yq e -i '.vars.IMAGE_REGISTRY = "{{.IMAGE_REGISTRY}}"' devspace.yaml
+        yq e -i '.vars.IMAGE_REPO = "{{.IMAGE_REPO}}"' devspace.yaml
+        devspace build --skip-push --tag {{.TAG}} -n default --no-warn
+
+  build-and-push-images-local:
+    desc: Build the images
+    vars:
+      STAGE:
+        sh: if [ "{{.STAGE}}" = "prd" ]; then echo "dev"; else echo "{{.STAGE}}"; fi
+      TAG:
+        sh: if [ "{{.STAGE}}" = "dev" ]; then echo "{{.CURRENT_VERSION}}.{{.STAGE}}"; else echo "{{.TAG}}"; fi
+    cmds:
+      - |
+        yq e -i '.vars.IMAGE_REGISTRY = "{{.IMAGE_REGISTRY}}"' devspace.yaml
+        yq e -i '.vars.IMAGE_REPO = "{{.IMAGE_REPO}}"' devspace.yaml
+        devspace build --tag "{{.TAG}}" -n default --no-warn
+
+  patch-values-file-patches-only:
+    desc: Gather and encode backend (grapi) injections (patches only)
+          and update values.yaml
+    cmds:
+        - echo "2) Looping over all grases/*/grapi* folders to patch grapi injections..."
+        - |
+          BASE_GRAS_FOLDER="grases"
+          BASE64=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo "base64"; else echo "base64 -w 0"; fi)
+          if [ ! -d "${BASE_GRAS_FOLDER}" ]; then
+            echo "No grases folder found, skipping."
+            exit 0
+          fi
+          # Loop over all grases/*/grapi* folders
+          for grapi_dir in ${BASE_GRAS_FOLDER}/*/grapi*; do
+            [ -d "${grapi_dir}" ] || continue
+            GRAS_DIR=$(dirname "${grapi_dir}")
+            GRAS_NAME=$(basename "${GRAS_DIR}")
+            GRAPI_FOLDER="${grapi_dir}"
+            if [ ! -d "${GRAPI_FOLDER}" ]; then
+              echo "No grapi folder in ${GRAS_DIR}, skipping."
+              continue
+            fi
+            echo "Processing grapi injections for ${GRAS_NAME} (${GRAPI_FOLDER})..."
+            # Find .sh and .bash files in grapi folder
+            if [[ "$OSTYPE" == "msys"* ]]; then
+              FINDFILES=$(find "${GRAPI_FOLDER}" -name '*.sh' -or -name '*.bash' 2>/dev/null | sort)
+            else
+              FINDFILES=$(find "${GRAPI_FOLDER}" -name '*.sh' -or -name '*.bash' 2>/dev/null | sort)
+            fi
+            if [ -z "${FINDFILES}" ]; then
+              echo "No grapi injection files found in ${GRAPI_FOLDER}, skipping patching."
+              continue
+            fi
+            # Patch values.yaml for each file
+            for file_path in ${FINDFILES}; do
+              rel_path=$(echo "${file_path}" | sed "s,${GRAPI_FOLDER}/,,g")
+              group_name=$(echo "${rel_path}" | cut -d/ -f1)
+              if [ "${group_name}" == "modules" ]; then continue; fi
+              file_name=$(echo "${rel_path}" | cut -d/ -f2)
+              file_extension=$(echo ${file_name##*.})
+              injection_name=$(echo ${file_name} | sed \
+                "s,.${group_name}.${file_extension},,g" | sed \
+                "s,.${group_name::${#group_name}-1}.${file_extension},,g" | \
+                sed "s,.${file_extension}$,,g")
+              base64_content=$(cat ${file_path} | tr -d '\r' | ${BASE64})
+              if [ "${file_name}" = "index.ts" ]; then continue; fi
+              echo "patching: ${GRAS_NAME}/$(basename "${GRAPI_FOLDER}") - ${group_name} - ${injection_name} - ${file_name}"
+              # Remove old entry if exists
+              yq -i "del(.grases.${GRAS_NAME}.grapi.${group_name}[] | select(.name == \"${injection_name}\"))" "{{.VALUES_YAML_PATH}}"
+              # If group_name is injections, patch as controllers
+              if [ "${group_name}" == "injections" ]; then 
+                group_name="controllers"
+              fi
+              yq -i ".grases.${GRAS_NAME}.grapi.${group_name} += [{\"name\": \"${injection_name}\", \"content\": \"${base64_content}\"}]" "{{.VALUES_YAML_PATH}}"
+            done
+          done
+
+  reset-values-file:
+    desc: Gather and encode backend (grapi) and frontend (gruim) injections 
+          and update values.yaml
+    cmds:
+      - echo "2) Looping over all grases/*/grapi* folders to reset grapi injections..."
+      - |
+        BASE_GRAS_FOLDER="grases"
+        BASE64=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo "base64"; else echo "base64 -w 0"; fi)
+        if [ ! -d "${BASE_GRAS_FOLDER}" ]; then
+          echo "No grases folder found, skipping."
+          exit 0
+        fi
+        # Loop over all grases/*/grapi* folders
+        for grapi_dir in ${BASE_GRAS_FOLDER}/*/grapi*; do
+          [ -d "${grapi_dir}" ] || continue
+          GRAS_DIR=$(dirname "${grapi_dir}")
+          GRAS_NAME=$(basename "${GRAS_DIR}")
+          GRAPI_FOLDER="${grapi_dir}"
+          if [ ! -d "${GRAPI_FOLDER}" ]; then
+            echo "No grapi folder in ${GRAS_DIR}, skipping."
+            continue
+          fi
+          echo "Resetting grapi injections for ${GRAS_NAME} (${GRAPI_FOLDER})..."
+          GROUPS="injections controllers prerelationpatches postpatches prediscoverypatches prepatches fuzzysearch models openapis repositories restcruds serviceproviders services cacheconfigs datasources relations"
+          for group_name in ${GROUPS}; do
+            if yq -e ".grases.${GRAS_NAME}.grapi.${group_name}[]" "{{.VALUES_YAML_PATH}}" >/dev/null 2>&1; then
+              has_content=$(yq eval ".grases.${GRAS_NAME}.grapi.${group_name}[] | select(has(\"content\")) | .content" "{{.VALUES_YAML_PATH}}" 2>/dev/null | head -n 1)
+              if [[ -n "$has_content" ]]; then
+                if [[ "$has_content" != \{* ]]; then
+                  echo "reset ${GRAS_NAME}/grapi ${group_name}"
+                  yq -i ".grases.${GRAS_NAME}.grapi.${group_name} = []" "{{.VALUES_YAML_PATH}}"
+                else
+                  echo "skip ${GRAS_NAME}/grapi ${group_name} (content looks like object)"
+                fi
+              else
+                echo "skip ${GRAS_NAME}/grapi ${group_name} (no content found)"
+              fi
+            else
+              echo "skip ${GRAS_NAME}/grapi ${group_name} (group missing or empty)"
+            fi
+          done
+        done
+ 
+ 
+      - echo "3) Looping over all grases/*/gruim* folders to reset gruim injections..."
+      - |
+        BASE_GRAS_FOLDER="grases"
+        BASE64=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo "base64"; else echo "base64 -w 0"; fi)
+        if [ ! -d "${BASE_GRAS_FOLDER}" ]; then
+          echo "No grases folder found, skipping."
+          exit 0
+        fi
+        # Loop over all grases/*/gruim* folders
+        for gruim_dir in ${BASE_GRAS_FOLDER}/*/gruim*; do
+          [ -d "${gruim_dir}" ] || continue
+          GRAS_DIR=$(dirname "${gruim_dir}")
+          GRAS_NAME=$(basename "${GRAS_DIR}")
+          GRUIM_FOLDER="${gruim_dir}"
+          if [ ! -d "${GRUIM_FOLDER}" ]; then
+            echo "No gruim folder in ${GRAS_DIR}, skipping."
+            continue
+          fi
+          echo "Resetting gruim injections for ${GRAS_NAME} (${GRUIM_FOLDER})..."
+          GROUPS="custommodules"
+          for group_name in ${GROUPS}; do
+            if yq -e ".grases.${GRAS_NAME}.gruim.${group_name}[]" "{{.VALUES_YAML_PATH}}" >/dev/null 2>&1; then
+              has_content=$(yq eval ".grases.${GRAS_NAME}.gruim.${group_name}[] | select(has(\"content\")) | .content" "{{.VALUES_YAML_PATH}}" 2>/dev/null | head -n 1)
+              if [[ -n "$has_content" ]]; then
+                if [[ "$has_content" != \{* ]]; then
+                  echo "reset ${GRAS_NAME}/gruim ${group_name}"
+                  yq -i ".grases.${GRAS_NAME}.gruim.${group_name} = []" "{{.VALUES_YAML_PATH}}"
+                else
+                  echo "skip ${GRAS_NAME}/gruim ${group_name} (content looks like object)"
+                fi
+              else
+                echo "skip ${GRAS_NAME}/gruim ${group_name} (no content found)"
+              fi
+            else
+              echo "skip ${GRAS_NAME}/gruim ${group_name} (group missing or empty)"
+            fi
+          done
+        done
+      
+  patch-values-file-modules:
+    desc: Update init-modules image for DevSpace dev pipeline
+    cmds:
+      - |
+        TAG=$(git describe --always)
+        IMAGE_NAME="${IMAGE_REGISTRY}/${IMAGE_REPO}-modules:${TAG}"
+        echo "Patching init-modules image to: ${IMAGE_NAME}"
+        # Update both the spec.image and the duplicate image field
+        yq e -i "(.grases[].grapi.initContainers[] | select(.name == \"init-modules\")).spec.image = \"${IMAGE_NAME}\"" {{.VALUES_YAML_PATH}}
+
+  patch-values-file:
+    desc: Gather and encode backend (grapi) and frontend (gruim) injections 
+          and update values.yaml
+    cmds:
+      - echo "2) Looping over all grases/*/grapi* folders to patch grapi injections..."
+      - |
+        # set -o noglob
+        BASE_GRAS_FOLDER="grases"
+        BASE64=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo "base64"; else echo "base64 -w 0"; fi)
+        SED=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo 'sed -i ".bak"'; else echo "sed -i"; fi)
+        if [ ! -d "${BASE_GRAS_FOLDER}" ]; then
+          echo "No grases folder found, skipping."
+          exit 0
+        fi
+        # Loop over all grases/*/grapi* folders
+        for grapi_dir in ${BASE_GRAS_FOLDER}/*/grapi*; do
+          [ -d "${grapi_dir}" ] || continue
+          GRAS_DIR=$(dirname "${grapi_dir}")
+          GRAS_NAME=$(basename "${GRAS_DIR}")
+          GRAPI_FOLDER="${grapi_dir}"
+          if [ ! -d "${GRAPI_FOLDER}" ]; then
+            echo "No grapi folder in ${GRAS_DIR}, skipping."
+            continue
+          fi
+          echo "Processing grapi injections for ${GRAS_NAME} (${GRAPI_FOLDER})..."
+          # Find .ts, .sh and .bash files in grapi folder
+          if [[ "$OSTYPE" == "msys"* ]]; then
+            FINDFILES=$(find "${GRAPI_FOLDER}" -name '*.ts' -or -name '*.sh' -or -name '*.bash' 2>/dev/null | sort)
+          else
+            FINDFILES=$(find "${GRAPI_FOLDER}" -name '*.ts' -or -name '*.sh' -or -name '*.bash' 2>/dev/null | sort)
+          fi
+          if [ -z "${FINDFILES}" ]; then
+            echo "No grapi injection files found in ${GRAPI_FOLDER}, skipping patching."
+            continue
+          fi
+          # Patch values.yaml for each file
+          for file_path in ${FINDFILES}; do
+            rel_path=$(echo "${file_path}" | sed "s,${GRAPI_FOLDER}/,,g")
+            group_name=$(echo "${rel_path}" | cut -d/ -f1)
+            if [ "${group_name}" == "modules" ]; then continue; fi
+            file_name=$(echo "${rel_path}" | cut -d/ -f2)
+            file_extension=$(echo ${file_name##*.})
+            injection_name=$(echo ${file_name} | sed \
+              "s,.${group_name}.${file_extension},,g" | sed \
+              "s,.${group_name::${#group_name}-1}.${file_extension},,g" | \
+              sed "s,.${file_extension}$,,g")
+            if [ "${group_name}" = "injections" ]; then 
+              group_name="controllers"
+              injection_name=$(echo ${injection_name} | sed "s,.controller,,g")
+            elif [ "${group_name}" = "serviceproviders" ]; then 
+              group_name="serviceproviders"
+              injection_name=$(echo ${injection_name} | sed "s,.service,,g")
+            fi
+            base64_content=$(cat ${file_path} | tr -d '\r' | ${BASE64})
+            base64_content_file=./tmpfile_${GRAS_NAME}_${injection_name}
+            cat ${file_path} | tr -d '\r' | ${BASE64} > ${base64_content_file}
+            ${SED} "1s/^/content=/" ${base64_content_file}
+            ${SED} "1s/^/name=${injection_name}\n/" ${base64_content_file}
+            if [ "${file_name}" = "index.ts" ]; then continue; fi
+            echo "patching: ${GRAS_NAME}/grapi - ${group_name} - ${injection_name} - ${file_name}"
+            # Remove old entry if exists
+            yq -i "del(.grases.${GRAS_NAME}.grapi.${group_name}[] | select(.name == \"${injection_name}\"))" "{{.VALUES_YAML_PATH}}"
+            yq -i ".grases.${GRAS_NAME}.grapi.${group_name} += [load_props(\"${base64_content_file}\")]" "{{.VALUES_YAML_PATH}}"
+            rm ${base64_content_file} 2>/dev/null || true
+          done
+        done
+        # set +o noglob
+
+
+      - echo "3) Looping over all grases/*/gruim* folders to patch gruim injections..."
+      - |
+        # set -o noglob
+        BASE_GRAS_FOLDER="grases"
+        BASE64=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo "base64"; else echo "base64 -w 0"; fi)
+        SED=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo 'sed -i ".bak"'; else echo "sed -i"; fi)
+        if [ ! -d "${BASE_GRAS_FOLDER}" ]; then
+          echo "No grases folder found, skipping."
+          exit 0
+        fi
+        # Loop over all grases/*/gruim* folders
+        for gruim_dir in ${BASE_GRAS_FOLDER}/*/gruim*; do
+          [ -d "${gruim_dir}" ] || continue
+          GRAS_DIR=$(dirname "${gruim_dir}")
+          GRAS_NAME=$(basename "${GRAS_DIR}")
+          GRUIM_FOLDER="${gruim_dir}"
+          if [ ! -d "${GRUIM_FOLDER}" ]; then
+            echo "No gruim folder in ${GRAS_DIR}, skipping."
+            continue
+          fi
+          echo "Processing gruim injections for ${GRAS_NAME} (${GRUIM_FOLDER})..."
+          cm="custommodules"
+          # Find .svelte and .jsx files in gruim folder
+          if [[ "$OSTYPE" == "msys"* ]]; then
+            FINDFILES=$(find "${GRUIM_FOLDER}/${cm}" -name '*.svelte' -or -name '*.jsx' 2>/dev/null | sort)
+          else
+            FINDFILES=$(find "${GRUIM_FOLDER}/${cm}" -name '*.svelte' -or -name '*.jsx' 2>/dev/null | sort)
+          fi
+          if [ -z "${FINDFILES}" ]; then
+            echo "No gruim injection files found in ${GRUIM_FOLDER}/${cm}, skipping patching."
+            continue
+          fi
+          # Clear existing custommodules for this gras
+          yq -i "del(.grases.${GRAS_NAME}.gruim.${cm}[])" "{{.VALUES_YAML_PATH}}"
+          # Patch values.yaml for each file
+          for file_path in ${FINDFILES}; do
+            rel_path=$(echo "${file_path}" | sed "s,${GRUIM_FOLDER}/,,g")
+            group_name=$(echo "${rel_path}" | cut -d/ -f1)
+            file_name=$(echo "${rel_path}" | cut -d/ -f2)
+            file_extension=$(echo ${file_name##*.})
+            injection_name=$(echo ${file_name} | sed "s,.${file_extension}$,,g")
+            base64_content=$(cat ${file_path} | tr -d '\r' | ${BASE64})
+            base64_content_file=./tmpfile_${GRAS_NAME}_${injection_name}
+            cat ${file_path} | tr -d '\r' | ${BASE64} > ${base64_content_file}
+            ${SED} "1s/^/content=/" ${base64_content_file}
+            ${SED} "1s/^/name=${injection_name}\n/" ${base64_content_file}
+            if [ "${file_name}" = "index.ts" ]; then continue; fi
+            echo "patching: ${GRAS_NAME}/gruim - ${cm} - ${injection_name} - ${file_name}"
+            yq -i ".grases.${GRAS_NAME}.gruim.${cm} += [load_props(\"${base64_content_file}\")]" "{{.VALUES_YAML_PATH}}"
+            rm ${base64_content_file} 2>/dev/null || true
+          done
+        done
+        # set +o noglob
+
+  version-bump:
+    desc: Bump the version
+    cmds:
+      - |
+        # Split the version into major, minor, and patch components
+        IFS='.' read -r major minor patch <<< "{{.CURRENT_VERSION}}"
+        
+        # Increment the patch version
+        patch=$((patch + 1))
+        
+        # If patch reaches 100, reset to 0 and increment minor version
+        if [ "$patch" -ge 100 ]; then
+          patch=0
+          minor=$((minor + 1))
+        fi
+        
+        # If minor reaches 100, reset to 0 and increment major version
+        if [ "$minor" -ge 100 ]; then
+          minor=0
+          major=$((major + 1))
+        fi
+        
+        NEW_VERSION="${major}.${minor}.${patch}"        
+        echo $NEW_VERSION > {{.CHART_FOLDER}}/{{.VERSION_FILE}}
+
+  package-chart:
+    desc: Package the Helm chart
+    cmds:
+      # Update init container image before packaging
+      - |
+        IMAGE_NAME="grpl/{{.APP_NAME}}-modules:{{.TAG}}"
+        if [ "{{.STAGE}}" != "prd" ]; then
+          IMAGE_NAME="grpl/{{.APP_NAME}}-{{.STAGE}}-modules:{{.TAG}}"
+        fi
+        echo "Patching init-modules image to: ${IMAGE_NAME}"
+        # Update both the spec.image and the duplicate image field
+        yq e -i "(.grases[].grapi.initContainers[] | select(.name == \"init-modules\")).spec.image = \"${IMAGE_NAME}\"" {{.VALUES_YAML_PATH}}
+      - |
+        # rename the chart properly
+        yq e -i '.name = "{{.CHART_NAME}}"' {{.CHART_FOLDER}}/Chart.yaml
+
+        # patch the image:
+        yq e -i '.image.repository = "{{.IMAGE_REGISTRY}}/{{.IMAGE_REPO}}"' {{.VALUES_YAML_PATH}}
+        yq e -i '.image.tag = "{{.TAG}}"' {{.VALUES_YAML_PATH}}
+
+        # run dependency update in order to prevent issue on the first build
+        helm dep up chart
+
+        # build the helm package
+        echo {{.SEMVER}}
+        helm package chart --version {{.SEMVER}}
+
+        echo "helm package created in: ./{{.CHART_NAME}}-{{.SEMVER}}.tgz"
+
+  push-chart-aws:
+    desc: Push the packaged Helm chart to the repository
+    env:
+      AWS_ACCESS_KEY_ID: '{{.AWS_ACCESS_KEY_ID}}'
+      AWS_SECRET_ACCESS_KEY: '{{.AWS_SECRET_ACCESS_KEY}}'
+    cmds:
+      - |
+        # had to add a sleep here to ensure the package is built - when package and push is called right after each other
+        sleep 2
+
+        # patch the chart:
+        yq e -i '.version = "{{.SEMVER}}"' {{.CHART_FOLDER}}/Chart.yaml
+        yq e -i '.appVersion = "{{.CURRENT_VERSION}}"' {{.CHART_FOLDER}}/Chart.yaml
+
+        # patch the image:
+        yq e -i '.image.repository = "{{.IMAGE_REGISTRY}}/{{.IMAGE_REPO}}"' {{.VALUES_YAML_PATH}}
+        yq e -i '.image.tag = "{{.TAG}}"' {{.VALUES_YAML_PATH}}
+
+        AWS_ACCESS_KEY_ID={{.AWS_ACCESS_KEY_ID}}
+        AWS_SECRET_ACCESS_KEY={{.AWS_SECRET_ACCESS_KEY}}
+        aws ecr-public get-login-password \
+          --region {{.AWS_REGION}} | helm registry login \
+          --username {{.AWS_USERNAME}} \
+          --password-stdin {{.REGISTRY}}
+        aws ecr-public create-repository --repository-name {{.CHART_NAME}} --region {{.AWS_REGION}} 2>/dev/null || true
+        helm push {{.CHART_NAME}}-{{.SEMVER}}.tgz {{.AWS_REPO_URL}} || (echo "ERROR: helm chart could not be pushed. Did you provide AWS credentials?" && exit 99)
+
+  deploy:
+    desc: Deploy the Helm chart to the Grapple cluster
+    cmds:
+      - |
+        # patch the chart:
+        yq e -i '.version = "{{.CURRENT_VERSION}}"' {{.CHART_FOLDER}}/Chart.yaml
+        yq e -i '.appVersion = "{{.CURRENT_VERSION}}"' {{.CHART_FOLDER}}/Chart.yaml
+
+        # patch the image:
+        yq e -i '.image.repository = "{{.IMAGE_REGISTRY}}/{{.IMAGE_REPO}}"' {{.VALUES_YAML_PATH}}
+        yq e -i '.image.tag = "{{.TAG}}"' {{.VALUES_YAML_PATH}}
+        
+        # patch test image:
+        yq e -i '.imagetest.repository = "{{.IMAGE_REGISTRY}}/{{.IMAGE_REPO}}-test"' {{.VALUES_YAML_PATH}}
+        yq e -i '.imagetest.tag = "{{.TAG}}"' {{.VALUES_YAML_PATH}}
+
+        VALUES_STAGE=$(echo "{{.VALUES_YAML_PATH}}" | sed "s,.yaml,-{{.STAGE}}.yaml,g")
+        echo "VALUES_STAGE: ${VALUES_STAGE}"
+        if [ -f ${VALUES_STAGE} ]; then
+
+          # patch data container:
+          if [ "$(yq '.gras.grapi.initContainers[0] | has("spec")' ${VALUES_STAGE})" = "true" ]; then
+          yq e -i '.gras.grapi.initContainers[0].spec.image = "grpl/{{.APP_NAME}}-{{.STAGE}}-data:{{.TAG}}"' ${VALUES_STAGE} || true
+          fi
+          if [ "$(yq '.gras.grapi.initContainers[1] | has("spec")' ${VALUES_STAGE})" = "true" ]; then
+          yq e -i '.gras.grapi.initContainers[1].spec.image = "grpl/{{.APP_NAME}}-{{.STAGE}}-data:{{.TAG}}"' ${VALUES_STAGE} || true
+          fi
+
+          VALUES_FILE_COMMAND=" -f ${VALUES_STAGE} "
+          echo "VALUES_FILE_STAGE: ${VALUES_FILE_STAGE}"
+
+        else
+          VALUES_FILE_STAGE=""
+        fi
+
+
+        helm upgrade --install {{.CHART_NAME}} {{.AWS_REPO_URL}}/{{.CHART_NAME}} ${VALUES_FILE_COMMAND} --version {{.SEMVER}} --namespace {{.NS}} --create-namespace
+
+
+  deploy-local:
+    desc: Deploy the Helm chart to the Grapple cluster
+    vars:
+      STAGE:
+        sh: if [ "{{.STAGE}}" = "prd" ]; then echo "dev"; else echo "{{.STAGE}}"; fi
+      TAG:
+        sh: if [ "{{.STAGE}}" = "dev" ]; then echo "{{.CURRENT_VERSION}}.{{.STAGE}}"; else echo "{{.TAG}}"; fi
+    cmds:
+      - task: patch-values-file
+      - |
+        # patch the chart:
+        yq e -i '.version = "{{.CURRENT_VERSION}}"' {{.CHART_FOLDER}}/Chart.yaml
+        yq e -i '.appVersion = "{{.CURRENT_VERSION}}"' {{.CHART_FOLDER}}/Chart.yaml
+
+        # patch the image:
+        yq e -i '.image.repository = "{{.IMAGE_REGISTRY}}/{{.IMAGE_REPO}}"' {{.VALUES_YAML_PATH}}
+        yq e -i '.image.tag = "{{.TAG}}"' {{.VALUES_YAML_PATH}}
+
+
+        # patch test image:
+        yq e -i '.imagetest.repository = "{{.IMAGE_REGISTRY}}/{{.IMAGE_REPO}}-test"' {{.VALUES_YAML_PATH}}
+        yq e -i '.imagetest.tag = "{{.TAG}}"' {{.VALUES_YAML_PATH}}
+
+
+        IMAGE_NAME="grpl/{{.IMAGE_REPO}}-modules:{{.TAG}}"
+        echo "Patching init-modules image to: ${IMAGE_NAME}"
+        # Update both the spec.image and the duplicate image field
+        yq e -i "(.grases[].grapi.initContainers[] | select(.name == \"init-modules\")).spec.image = \"${IMAGE_NAME}\"" {{.VALUES_YAML_PATH}}
+
+        DATA_IMAGE_NAME="grpl/{{.IMAGE_REPO}}-data:{{.TAG}}"
+        echo "Patching init-data image to: ${DATA_IMAGE_NAME}"
+        yq e -i "(.grases[].grapi.initContainers[] | select(.spec.image | contains(\"-data\"))).spec.image = \"${DATA_IMAGE_NAME}\"" {{.VALUES_YAML_PATH}}
+
+
+        # run dependency update in order to prevent issue on the first build
+        helm dep up chart
+
+        helm upgrade --install {{.CHART_NAME}} {{.CHART_FOLDER}} ${VALUES_FILE_COMMAND} --namespace "{{.CHART_NAME_SHORT}}-{{.STAGE}}" --create-namespace -f ./chart/values-dev.yaml
+      - task: reset-values-file
+
+  update-bitbucket-pr:
+    desc: Deploy the Helm chart to the Grapple cluster
+    cmds:
+      - |
+        echo "wait on grapi deployments"
+        echo "kubectl get grapi -n {{.NS}}"
+        kubectl get grapi -n {{.NS}}
+        sleep 10
+        echo "kubectl wait grapi -n {{.NS}} -l app.kubernetes.io/component=grapi --for condition=Synced"
+        kubectl wait grapi -n {{.NS}} -l app.kubernetes.io/component=grapi --for condition=Synced
+        kubectl wait gruim -n {{.NS}} -l app.kubernetes.io/component=gruim --for condition=Synced
+        sleep 3
+        APPURL=$(kubectl get ing -n {{.NS}} -l app.kubernetes.io/layer=app -o jsonpath="{.items[0].spec.rules[0].host}")
+        echo "APPURL: ${APPURL}"
+        GRUIMURL=$(kubectl get ing -n {{.NS}} -l app.kubernetes.io/name=gruim -o jsonpath="{.items[0].spec.rules[0].host}")
+        echo "GRUIMURL: ${GRUIMURL}"
+        GRAPIURL=$(kubectl get ing -n {{.NS}} -l app.kubernetes.io/name=grapi -o jsonpath="{.items[0].spec.rules[0].host}")
+        echo "GRAPIURL: ${GRAPIURL}"
+        if [ "${BITBUCKET_PR_ID}" != "" ]; then
+          curl https://api.bitbucket.org/2.0/repositories/wolke7-patrick/{{.BITBUCKET_PATH}}/pullrequests/${BITBUCKET_PR_ID}/comments \
+            -u ${bbuser}:${bbpw} \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --data "{
+            \"content\": {
+                \"raw\": \"TestURL (app): [http://${APPURL}](http://${APPURL}) -- Frontend (gruim): [http://${GRUIMURL}](http://${GRUIMURL}) -- Backend (grapi): [http://${GRAPIURL}](http://${GRAPIURL})\"
+            }
+            }"
+        fi
+
+
+  build-and-deploy-local:
+    desc: Build, package, and push the Helm chart in one step
+    cmds:
+      - task: build-and-push-images-local
+      - task: deploy-local
+
+  build-package-push:
+    desc: Build, package, and push the Helm chart in one step
+    cmds:
+      - task: build-and-push-images
+      - task: patch-values-file
+      - task: package-chart
+      - task: push-chart-aws
+
+  build-package-push-deploy:
+    desc: Build, package, and push the Helm chart in one step
+    cmds:
+      - task: build-and-push-images
+      - task: patch-values-file
+      - task: package-chart
+      - task: push-chart-aws
+      - task: deploy
+
+  package-push-deploy:
+    desc: update Helm chart in one step
+    cmds:
+      - task: package-chart
+      - task: push-chart-aws
+      - task: deploy

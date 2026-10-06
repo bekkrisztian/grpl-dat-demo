@@ -1,0 +1,10 @@
+FROM alpine:latest
+WORKDIR /
+# Create directories for module organization
+RUN mkdir -p /modules/gras
+# Copy module source files (TypeScript, configs)
+# The compilation will happen at runtime in the grapi container
+COPY grases/gras/grapi/modules/ /modules/gras/
+# List modules for verification
+RUN ls -R /modules
+

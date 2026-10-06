@@ -1,0 +1,16 @@
+{{- if .Values.strapi.enabled }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: strapi-config
+type: Opaque
+stringData:
+  HOST: {{ .Values.strapi.HOST | quote }}
+  PORT: {{ .Values.strapi.PORT | default "1337" | quote }}
+  APP_KEYS: {{ .Values.strapi.APP_KEYS | quote }}
+  API_TOKEN_SALT: {{ .Values.strapi.API_TOKEN_SALT | quote }}
+  ADMIN_JWT_SECRET: {{ .Values.strapi.ADMIN_JWT_SECRET | quote }}
+  TRANSFER_TOKEN_SALT: {{ .Values.strapi.TRANSFER_TOKEN_SALT | quote }}
+  ENCRYPTION_KEY: {{ .Values.strapi.ENCRYPTION_KEY | quote }}
+  JWT_SECRET: {{ .Values.strapi.JWT_SECRET | quote }}
+{{- end }}

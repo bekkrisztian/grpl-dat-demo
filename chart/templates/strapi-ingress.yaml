@@ -1,0 +1,127 @@
+{{- if .Values.strapi.enabled }}
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "myapp.fullname" . -}}
+{{- if and .Values.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
+  {{- if not (hasKey .Values.ingress.annotations "kubernetes.io/ingress.class") }}
+  {{- $_ := set .Values.ingress.annotations "kubernetes.io/ingress.class" .Values.ingress.className}}
+  {{- end }}
+{{- end }}
+{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1
+{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: networking.k8s.io/v1beta1
+{{- else -}}
+apiVersion: extensions/v1beta1
+{{- end }}
+kind: Ingress
+metadata:
+  name: "grapple-aladv-strapi"
+  labels:
+    app.kubernetes.io/layer: strapi
+    {{- include "myapp.labels" . | nindent 4 }}
+  annotations:
+    {{- if .Values.ingress.ssl }}
+    {{- if .Values.lookup.enabled -}}
+    {{ $secret := (lookup "v1" "Secret" "grpl-system" "grsf-config" ) }}
+    cert-manager.io/cluster-issuer: {{ index $secret.data "sslissuer" | b64dec }}
+    {{- else }}
+    cert-manager.io/cluster-issuer: {{ .Values.lookup.sslissuer }}
+    {{- end }}
+    {{- end }}
+  {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if and .Values.ingress.className (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  tls:
+    {{- if .Values.ingress.ssl }}
+    {{- if .Values.lookup.enabled -}}
+    {{ $secret := (lookup "v1" "Secret" "grpl-system" "grsf-config" ) }}
+    - hosts:
+        - {{ .Release.Namespace }}-strapi.{{ index $secret.data "GRAPPLE_DNS" | b64dec }}
+        - {{ .Release.Namespace }}-strapi-preview.{{ index $secret.data "GRAPPLE_DNS" | b64dec }}
+      secretName: {{ $fullName }}-strapi-tls
+    {{- else }}
+    - hosts:
+        - {{ .Release.Namespace }}-strapi.{{ .Values.lookup.domain }}
+        - {{ .Release.Namespace }}-strapi-preview.{{ .Values.lookup.domain }}
+      secretName: {{ $fullName }}-strapi-tls
+    {{- end }}
+    {{- end }}
+  rules:
+    {{- if .Values.lookup.enabled -}}
+    {{- $secret := (lookup "v1" "Secret" "grpl-system" "grsf-config" ) }}
+    - host: {{ .Release.Namespace }}-strapi.{{ index $secret.data "GRAPPLE_DNS" | b64dec }}
+      http:
+        paths:
+          - path: /
+            {{- if (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: ImplementationSpecific
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: "grapple-aladv-strapi"
+                port:
+                  number: 80
+              {{- else }}
+              serviceName: "grapple-aladv-strapi"
+              servicePort: 80
+              {{- end }}
+    - host: {{ .Release.Namespace }}-strapi-preview.{{ index $secret.data "GRAPPLE_DNS" | b64dec }}
+      http:
+        paths:
+          - path: /
+            {{- if (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: ImplementationSpecific
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: "grapple-aladv-strapi-preview"
+                port:
+                  number: 80
+              {{- else }}
+              serviceName: "grapple-aladv-strapi-preview"
+              servicePort: 80
+              {{- end }}
+    {{- else }}
+    - host: {{ .Release.Namespace }}-strapi.{{ .Values.lookup.domain }}
+      http:
+        paths:
+          - path: /
+            {{- if (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: ImplementationSpecific
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: "grapple-aladv-strapi"
+                port:
+                  number: 80
+              {{- else }}
+              serviceName: "grapple-aladv-strapi"
+              servicePort: 80
+              {{- end }}
+    - host: {{ .Release.Namespace }}-strapi-preview.{{ .Values.lookup.domain }}
+      http:
+        paths:
+          - path: /
+            {{- if (semverCompare ">=1.18-0" $.Capabilities.KubeVersion.GitVersion) }}
+            pathType: ImplementationSpecific
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: "grapple-aladv-strapi-preview"
+                port:
+                  number: 80
+              {{- else }}
+              serviceName: "grapple-aladv-strapi-preview"
+              servicePort: 80
+              {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

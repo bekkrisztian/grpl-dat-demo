@@ -1,0 +1,239 @@
+{{- if .Values.strapi.enabled }}
+{{- $prot := "http://" -}}
+{{ if .Values.ingress.ssl }}
+  {{- $prot = "https://" -}}
+{{ end}}
+{{- $secret := (lookup "v1" "Secret" "grpl-system" "grsf-config" ) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grapple-aladv-strapi
+  labels:
+    app: grapple-aladv-strapi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grapple-aladv-strapi
+  template:
+    metadata:
+      labels:
+        app: grapple-aladv-strapi
+    spec:
+      volumes:
+        - name: strapi-db
+          secret:
+            secretName: strapi-db
+      initContainers:
+      - image: mysql
+        name: init-db
+        command:
+        - bash
+        - -c
+        - |
+          sleep 5;
+          mysql -h $(host) -P $(port) -u $(username) -p$(password) -e "CREATE DATABASE IF NOT EXISTS strapi;" || exit 1;
+          sleep 5;
+          while ! mysql -h $(host) -P $(port) -u $(username) -p$(password) -e "show databases;" 2>/dev/null; do
+            echo -n .;
+            sleep 2;
+          done;
+          sleep 5;
+          if ! mysql -h ${host} -P ${port} -u ${username} -p${password} -e "use strapi; show tables; " | grep -i "mf_sources"; then
+            mysql -h $(host) -P $(port) -u $(username) -p$(password) strapi < /tmp/strapi-db/strapi.dump || true
+            echo "data loaded"
+          else
+            echo "database already initialized, skipping import"
+          fi
+        envFrom:
+          - secretRef:
+              name: {{ .Values.db.dbClusterName }}-conn-credential
+        volumeMounts:
+          - name: strapi-db
+            readOnly: true
+            mountPath: "/tmp/strapi-db"
+      containers:
+        - name: grapple-aladv-strapi
+          image: grpl/grapple-strapi:0.3.5
+          imagePullPolicy: Always
+          command:
+          - sh
+          - -c
+          - |
+            sed -i "s,http://localhost:3001,${LAYOUT_RENDERER_URL},g" node_modules/strapi-plugin-grapple-builder/dist/_chunks/*
+            pnpm build
+            pnpm develop
+          ports:
+          - containerPort: 1337
+            protocol: TCP
+          - containerPort: 5173
+            protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: "development"
+            # superfluous env vars STRAPI_ADMIN_*
+            {{- if .Values.lookup.enabled }}
+            - name: STRAPI_ADMIN_HOST
+              value: {{ printf "%s-strapi.%s" .Release.Namespace ( index $secret.data "GRAPPLE_DNS" | b64dec ) }}
+            - name: LAYOUT_RENDERER_URL
+              value: {{ printf "%s%s-strapi-preview.%s" $prot .Release.Namespace ( index $secret.data "GRAPPLE_DNS" | b64dec ) }}/
+            {{- else }}
+            - name: STRAPI_ADMIN_HOST
+              value: "{{ .Release.Namespace }}-strapi.{{ .Values.lookup.domain }}"
+            - name: LAYOUT_RENDERER_URL
+              value: "{{ $prot }}{{ .Release.Namespace }}-strapi-preview.{{ .Values.lookup.domain }}/"
+            {{- end }}
+            - name: STRAPI_ADMIN_PORT
+              value: "80"
+            - name: DATABASE_CLIENT
+              value: mysql
+            - name: DATABASE_NAME
+              value: "strapi"
+            - name: DATABASE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.dbClusterName }}-conn-credential
+                  key: host
+            - name: DATABASE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.dbClusterName }}-conn-credential
+                  key: port
+            - name: DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.dbClusterName }}-conn-credential
+                  key: username
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.dbClusterName }}-conn-credential
+                  key: password
+            - name: SVELTE_APP_FE_REMOTE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: "{{ .Release.Namespace }}-{{ .Release.Name }}-gras-gruim-muim"
+                  key: remoteentry
+          envFrom:
+            - secretRef:
+                name: strapi-config
+          resources:
+            limits:
+              cpu: "4"
+              memory: "4Gi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 1337
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /
+              port: 1337
+            failureThreshold: 60
+            periodSeconds: 10
+        - name: grapple-aladv-strapi-preview
+          image: grpl/grapple-strapi-preview:0.3.3
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+          command:
+          - sh
+          - -c
+          - |
+            sed -i "s,http://localhost:1337,${STRAPI_URL},g" src/api.ts
+            pnpm dev
+          env:
+            {{- if .Values.lookup.enabled }}
+            - name: STRAPI_URL
+              value: {{ $prot }}{{ .Release.Namespace }}-strapi.{{ index $secret.data "GRAPPLE_DNS" | b64dec }}
+            {{- else }}
+            - name: STRAPI_URL
+              value: "{{ $prot }}{{ .Release.Namespace }}-strapi.{{ .Values.lookup.domain }}"
+            {{- end }}
+          resources:
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /
+              port: 3001
+            failureThreshold: 30
+            periodSeconds: 10
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: strapi-mf-sources-update
+spec:
+  template:
+    metadata:
+      name: strapi-mf-sources-update
+    spec:
+      containers:
+      - image: curlimages/curl
+        name: strapi-mf-sources-update
+        env:
+        - name: SVELTE_APP_FE_REMOTE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: "{{ .Release.Namespace }}-{{ .Release.Name }}-gras-gruim-muim"
+              key: remoteentry
+        {{- if .Values.lookup.enabled }}
+        command:
+          - sh
+          - -c
+          - |
+            sleep 30
+            while ! curl -k -Is "${SVELTE_APP_FE_REMOTE_URL}" 2>/dev/null | head -1 | grep 200; do
+                echo "waiting for remoteEntry.js to be available..."
+                sleep 10
+            done
+            sleep 5
+            echo "starting to verify if mf-source update with curl is successful..."
+            manifestUrl=$(echo "$SVELTE_APP_FE_REMOTE_URL" | sed 's,remoteEntry.js,dashboard.json,g')
+            payload=$(printf '{"name":"ALADV","manifestUrl":"%s"}' "$manifestUrl")
+            while ! curl -X PUT --fail -s -H 'Content-Type: application/json' -d"${payload}" "{{ $prot }}{{ .Release.Namespace }}-strapi.{{ index $secret.data "GRAPPLE_DNS" | b64dec }}/mf-builder/mf-sources/o90q2lrag1c58nqgpux8gb7v" >/dev/null 2>&1
+              do 
+                echo "update of mf-source with curl not yet successful. Retrying..."
+                sleep 10
+              done
+            echo "update of mf-source with curl was successful..."
+        {{- else }}
+        command:
+          - sh
+          - -c
+          - |
+            sleep 30
+            while ! curl -k -Is "${SVELTE_APP_FE_REMOTE_URL}" 2>/dev/null | head -1 | grep 200; do
+                echo "waiting for remoteEntry.js to be available..."
+                sleep 10
+            sleep 5
+            echo "starting to verify if mf-source update with curl is successful..."
+            manifestUrl=$(echo "$SVELTE_APP_FE_REMOTE_URL" | sed 's,remoteEntry.js,dashboard.json,g')
+            payload=$(printf '{"name":"ALADV","manifestUrl":"%s"}' "$manifestUrl")
+            while ! curl -X PUT --fail -s -H 'Content-Type: application/json' -d"${payload}" "{{ $prot }}{{ .Release.Namespace }}-strapi.{{ .Values.lookup.domain }}/mf-builder/mf-sources/o90q2lrag1c58nqgpux8gb7v" >/dev/null 2>&1
+              do 
+                echo "update of mf-source with curl not yet successful. Retrying..."
+                sleep 10
+              done
+            echo "update of mf-source with curl was successful..."
+        {{- end }}
+      restartPolicy: Never
+{{- end }}

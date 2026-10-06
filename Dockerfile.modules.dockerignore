@@ -1,0 +1,25 @@
+**/node_modules/
+node_modules
+**/dist
+.git
+npm-debug.log
+.coverage
+.coverage.*
+.env
+.aws
+.gitignore
+.dockerignore
+Dockerfile
+Dockerfile.test
+chart/**
+tags.json
+target
+skaffold.yaml
+docker-compose.yaml
+devspace.yaml
+*.tgz
+Taskfile.yaml
+bitbucket-pipelines.yml
+# Explicitly allow the modules folders (by NOT excluding them like the main .dockerignore does)
+# We want to include grases/*/grapi/modules
+
