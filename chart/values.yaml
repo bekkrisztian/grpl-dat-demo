@@ -68,6 +68,7 @@ grases:
       prerelationpatches: []
       prepatches: []
       prediscoverypatches: []
+      initContainers: []
     gruim:
       name: dat-demo
       runimages:

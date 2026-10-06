@@ -91,6 +91,7 @@ deployments:
   app:
     # This deployment uses `helm` but you can also define `kubectl` deployments or kustomizations
     helm:
+      releaseName: ${APP_NAME}
       # We are deploying this project with the Helm chart you provided
       chart:
         name: ./chart
@@ -100,6 +101,8 @@ deployments:
         - ./chart/values.yaml
         - ./chart/values-dev.yaml
         - ./chart/values-devspace.yaml
+        # copy chart/values-secret.example.yaml to this path and fill in the DAT
+        # database credentials; without it the grapi pod has no datasource secret.
         - ./chart/values-secret.yaml
       values:
         DEV: "true"
