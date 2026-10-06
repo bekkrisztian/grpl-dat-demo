@@ -1,4 +1,36 @@
 services:
+  dat-api:
+    image: grpl/loopback:0.4.25
+    command: ["/bin/sh", "-c", "./start.sh"]
+    ports:
+      - "3333:3000"
+    environment:
+      host: ${DAT_DB_HOST:?Set DAT_DB_HOST in .env}
+      port: ${DAT_DB_PORT:-3306}
+      username: ${DAT_DB_USER:?Set DAT_DB_USER in .env}
+      password: ${DAT_DB_PASSWORD:?Set DAT_DB_PASSWORD in .env}
+      DEV: "true"
+      DiscoveredRepos: "true"
+      DataSources: >-
+        dsearchtree:{"name":"dsearchtree","connector":"mysql","url":"","host":"$${host}","port":"$${port}","user":"$${username}","password":"$${password}","database":"${DAT_DB_NAME:-dsearchtree}"}
+      Discoveries: >-
+        dsearchtree:{"dataSource":"dsearchtree","schema":"${DAT_DB_NAME:-dsearchtree}","all":"true","disableCamelCase":false}
+      RestCruds: >-
+        dsearchtree:{"datasource":"dsearchtree"}
+      SQLController: >-
+        brandsByVehicleType:{"query":"select FZA, HST, HSTB from dsearchtree.datecode2 where FZA = \"$${FZA}\" group by FZA, HST, HSTB order by FZA, HSTB;","path":"brandsByVehicleType","controllerName":"brandsByVehicleType"}|
+        modelRangeByVehicleTypeAndManufacturer:{"query":"select FZA, HST, HSTB, OTG, OTGB from dsearchtree.datecode2 where FZA = \"$${FZA}\" and HST = \"$${HST}\" group by FZA, HST, HSTB, OTG, OTGB order by FZA, OTGB;","path":"modelRangeByVehicleTypeAndManufacturer","controllerName":"modelRangeByVehicleTypeAndManufacturer"}|
+        modelGroupByVehicleTypeAndManufacturerAndModelRange:{"query":"select FZA, HST, HSTB, OTG, OTGB, HT, HTB from dsearchtree.datecode2 where FZA = \"$${FZA}\" and HST = \"$${HST}\" and OTG = \"$${OTG}\" group by FZA, HST, HSTB, OTG, OTGB, HT, HTB order by FZA, HSTB, OTGB;","path":"modelGroupByVehicleTypeAndManufacturerAndModelRange","controllerName":"modelGroupByVehicleTypeAndManufacturerAndModelRange"}|
+        modelByVehicleTypeAndManufacturerAndModelGroup:{"query":"select FZA, HST, HSTB, HT, HTB, UT, UTB from dsearchtree.datecode2 where FZA = \"$${FZA}\" and HST = \"$${HST}\" and HT = \"$${HT}\" group by FZA, HST, HSTB, HT, HTB, UT, UTB order by FZA, HSTB;","path":"modelByVehicleTypeAndManufacturerAndModelGroup","controllerName":"modelByVehicleTypeAndManufacturerAndModelGroup"}
+      LoggingConfigs: >-
+        dsearchtree:{"loglevel":"info","httplog":true,"global":true,"group":"logging"}
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 120s
+
   app:
     build:
       context: .
@@ -6,8 +38,7 @@ services:
     ports:
       - "4000:80"
     environment:
-      SVELTE_APP_REMOTE_URL: ${SVELTE_APP_REMOTE_URL:-}
-      CONTAINER_NAME: ${CONTAINER_NAME:-}
-
-# DAT backend services will be added once their credentials are available through
-# local environment variables or a secret store. Credentials must not be committed.
+      SVELTE_APP_API_URL: http://localhost:3333
+    depends_on:
+      dat-api:
+        condition: service_healthy

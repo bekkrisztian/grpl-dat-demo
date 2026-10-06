@@ -8,8 +8,8 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
 
-The repository currently contains the modernized application scaffold. DAT backend
-services and the two search screens will be added next.
+The demo contains both requested screens and talks directly to the DAT layer-one
+LoopBack API. Only the API endpoints used by the screens are generated.
 
 ## Local frontend development
 
@@ -22,6 +22,31 @@ pnpm dev
 ```
 
 The frontend is available at <http://localhost:4000>.
+
+## Complete Docker setup
+
+Copy `.env.example` to `.env` and fill in the DAT database settings. Then start
+the API and frontend:
+
+```sh
+docker compose up --build
+```
+
+The DAT API is available at <http://localhost:3333> and the demo UI at
+<http://localhost:4000>. The first API startup generates the LoopBack models and
+controllers and can take approximately two minutes.
+
+The cache proxy and Gruim containers from the original setup are intentionally
+not required: this custom UI consumes the layer-one OpenAPI directly. This also
+avoids the unavailable external Redis host from the original commands.
+
+## API behavior
+
+The generated `/vehicleTypes` controller in `grpl/loopback:0.4.25` fails when
+called without parameters. The UI therefore uses the five verified DAT FZA categories
+directly. Fuzzy search uses a database-side, limited
+`globalSearch LIKE` query; the generated fuzzy endpoint is not used because an
+unfiltered request loads the full data set into memory.
 
 ## Validation
 
