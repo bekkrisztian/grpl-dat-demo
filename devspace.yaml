@@ -99,6 +99,7 @@ deployments:
         - ./chart/values.yaml
         - ./chart/values-dev.yaml
         - ./chart/values-devspace.yaml
+        - ./chart/values-secret.yaml
       values:
         DEV: "true"
 # This is a list of `dev` containers that are based on the containers created by your deployments

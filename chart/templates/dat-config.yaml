@@ -1,0 +1,26 @@
+{{- $datDb := default dict (default dict .Values.secrets).datDb -}}
+{{- if and $datDb.host $datDb.username $datDb.password }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dat-db-config
+type: Opaque
+stringData:
+  host: {{ $datDb.host | quote }}
+  port: {{ default "3306" $datDb.port | quote }}
+  username: {{ $datDb.username | quote }}
+  password: {{ $datDb.password | quote }}
+  database: {{ default "dsearchtree" $datDb.database | quote }}
+---
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dat-sqlcontrollers
+type: Opaque
+stringData:
+  SQLController: >-
+    brandsByVehicleType:{"query":"select FZA, HST, HSTB from dsearchtree.datecode2 where FZA = \"${FZA}\" group by FZA, HST, HSTB order by FZA, HSTB;","path":"brandsByVehicleType","controllerName":"brandsByVehicleType"}|
+    modelRangeByVehicleTypeAndManufacturer:{"query":"select FZA, HST, HSTB, OTG, OTGB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" group by FZA, HST, HSTB, OTG, OTGB order by FZA, OTGB;","path":"modelRangeByVehicleTypeAndManufacturer","controllerName":"modelRangeByVehicleTypeAndManufacturer"}|
+    modelGroupByVehicleTypeAndManufacturerAndModelRange:{"query":"select FZA, HST, HSTB, OTG, OTGB, HT, HTB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" and OTG = \"${OTG}\" group by FZA, HST, HSTB, OTG, OTGB, HT, HTB order by FZA, HSTB, OTGB;","path":"modelGroupByVehicleTypeAndManufacturerAndModelRange","controllerName":"modelGroupByVehicleTypeAndManufacturerAndModelRange"}|
+    modelByVehicleTypeAndManufacturerAndModelGroup:{"query":"select FZA, HST, HSTB, HT, HTB, UT, UTB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" and HT = \"${HT}\" group by FZA, HST, HSTB, HT, HTB, UT, UTB order by FZA, HSTB;","path":"modelByVehicleTypeAndManufacturerAndModelGroup","controllerName":"modelByVehicleTypeAndManufacturerAndModelGroup"}

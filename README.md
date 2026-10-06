@@ -48,6 +48,21 @@ directly. Fuzzy search uses a database-side, limited
 `globalSearch LIKE` query; the generated fuzzy endpoint is not used because an
 unfiltered request loads the full data set into memory.
 
+## Grapple cluster development
+
+Create the ignored Helm secret values file before starting DevSpace:
+
+```sh
+cp chart/values-secret.example.yaml chart/values-secret.yaml
+# Edit chart/values-secret.yaml with the DAT database credentials.
+grpl dev ns <namespace>
+devspace dev
+```
+
+The chart configures the DAT MySQL datasource, discovery, REST CRUD and the four
+SQL controllers used by the search tree. Database credentials are rendered into
+the `dat-db-config` Kubernetes Secret and are never stored in `values.yaml`.
+
 ## Validation
 
 ```sh
