@@ -72,7 +72,10 @@ module.exports = {
   },
   mode,
   plugins: [
-    new webpack.DefinePlugin({ ...includeEnv() }),
+    new webpack.DefinePlugin({
+      ...includeEnv(),
+      "process.env.SVELTE_APP_API_URL": JSON.stringify(process.env.SVELTE_APP_API_URL || ""),
+    }),
     new ModuleFederationPlugin({
       name: "client",
       filename: "remoteEntry.js",
