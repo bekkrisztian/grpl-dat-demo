@@ -1,6 +1,7 @@
 version: v2beta1
 name: grpl-dat-demo
 vars:
+  APP_NAME: "dat-demo"
   IMAGE_REGISTRY: "grpl"
   IMAGE_REPO: "grpl-dat-demo"
   
@@ -107,7 +108,8 @@ dev:
   app:
     # Search for the container that runs this image
     labelSelector:
-      app.kubernetes.io/instance: app
+      app.kubernetes.io/instance: ${APP_NAME}
+      app.kubernetes.io/name: grpl-dat-demo
     # Replace the container image with this dev-optimized image (allows to skip image building during development)
     devImage: "${IMAGE_REGISTRY}/${IMAGE_REPO}:devspace"
     # Sync files between the local filesystem and the development container
@@ -146,7 +148,8 @@ dev:
     # Search for the container that runs this image
     labelSelector:
       app.kubernetes.io/name: gruim
-    devImage: docker.io/grpl/gruim:0.2.9
+      grpl.io/resourceName: ${APP_NAME}-gras-gruim
+    devImage: grpl/gruim:0.3.61
     env:
       - name: DEV
         value: "true"
@@ -170,7 +173,8 @@ dev:
     # Search for the container that runs this image
     labelSelector:
       app.kubernetes.io/name: grapi
-    devImage: docker.io/grpl/grapi:0.2.9
+      grpl.io/resourceName: ${APP_NAME}-gras-grapi
+    devImage: grpl/loopback:0.4.25
     env:
       - name: DEV
         value: "true"
