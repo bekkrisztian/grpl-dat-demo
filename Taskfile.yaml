@@ -312,6 +312,9 @@ tasks:
         echo "Patching init-modules image to: ${IMAGE_NAME}"
         # Update both the spec.image and the duplicate image field
         yq e -i "(.grases[].grapi.initContainers[] | select(.name == \"init-modules\")).spec.image = \"${IMAGE_NAME}\"" {{.VALUES_YAML_PATH}}
+        DATA_IMAGE_NAME="${IMAGE_REGISTRY}/${IMAGE_REPO}-data:${TAG}"
+        echo "Patching init-db image to: ${DATA_IMAGE_NAME}"
+        yq e -i "(.grases[].grapi.initContainers[] | select(.name == \"init-db\")).spec.image = \"${DATA_IMAGE_NAME}\"" {{.VALUES_YAML_PATH}}
 
   patch-values-file:
     desc: Gather and encode backend (grapi) and frontend (gruim) injections 

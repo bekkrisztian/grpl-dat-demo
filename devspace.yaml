@@ -10,17 +10,17 @@ vars:
   
   APP_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}"
   TEST_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}-test"
-  DATA_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}-data" # currently not being used
+  DATA_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}-data"
   MODULES_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}-modules"
   
   APP_DOCKERFILE: "Dockerfile"
   TEST_DOCKERFILE: "Dockerfile.test"
-  DATA_DOCKERFILE: "Dockerfile.data" # currently not being used
+  DATA_DOCKERFILE: "Dockerfile.data"
   MODULES_DOCKERFILE: "Dockerfile.modules"
   
   # here you need to define the images to build and their coresponding dockerfiles
-  IMAGES: "${APP_IMAGE}:${TAG} ${TEST_IMAGE}:${TAG} ${MODULES_IMAGE}:${TAG}"
-  DOCKERFILES: "${APP_DOCKERFILE} ${TEST_DOCKERFILE} ${MODULES_DOCKERFILE}"
+  IMAGES: "${APP_IMAGE}:${TAG} ${TEST_IMAGE}:${TAG} ${MODULES_IMAGE}:${TAG} ${DATA_IMAGE}:${TAG}"
+  DOCKERFILES: "${APP_DOCKERFILE} ${TEST_DOCKERFILE} ${MODULES_DOCKERFILE} ${DATA_DOCKERFILE}"
 # This is a list of `pipelines` that DevSpace can execute (you can define your own)
 functions:
   patch-values-file: |-
@@ -82,11 +82,11 @@ images:
     dockerfile: ${MODULES_DOCKERFILE}
     buildKit:
       args: [--platform, 'linux/amd64,linux/arm64']
-  # data:
-  #   image: "${IMAGE_REGISTRY}/${IMAGE_REPO}-data:devspace"
-  #   dockerfile: ./Dockerfile.data
-  #   buildKit: # {} # implemented for bitbucket pipeline with the patch at the end of this file
-  #     args: [--platform, 'linux/amd64,linux/arm64']
+  data:
+    image: "${DATA_IMAGE}:devspace"
+    dockerfile: ${DATA_DOCKERFILE}
+    buildKit:
+      args: [--platform, 'linux/amd64,linux/arm64']
 # This is a list of `deployments` that DevSpace can create for this project
 deployments:
   app:
@@ -102,9 +102,6 @@ deployments:
         - ./chart/values.yaml
         - ./chart/values-dev.yaml
         - ./chart/values-devspace.yaml
-        # copy chart/values-secret.example.yaml to this path and fill in the DAT
-        # database credentials; without it the grapi pod has no datasource secret.
-        - ./chart/values-secret.yaml
       values:
         DEV: "true"
 # This is a list of `dev` containers that are based on the containers created by your deployments

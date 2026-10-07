@@ -1,18 +1,3 @@
-{{- $datDb := default dict (default dict .Values.secrets).datDb -}}
-{{- if and $datDb.host $datDb.username $datDb.password }}
-apiVersion: v1
-kind: Secret
-metadata:
-  name: dat-db-config
-type: Opaque
-stringData:
-  host: {{ $datDb.host | quote }}
-  port: {{ default "3306" $datDb.port | quote }}
-  username: {{ $datDb.username | quote }}
-  password: {{ $datDb.password | quote }}
-  database: {{ default "dsearchtree" $datDb.database | quote }}
----
-{{- end }}
 apiVersion: v1
 kind: Secret
 metadata:
