@@ -72,6 +72,7 @@ services:
       - "4000:80"
     environment:
       SVELTE_APP_API_URL: http://localhost:3334/dsearchtree
+      SVELTE_APP_TREE_API_URL: http://localhost:3333
     depends_on:
       dat-api:
         condition: service_healthy
