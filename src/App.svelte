@@ -67,7 +67,10 @@
     browseLoading = true;
     browseError = "";
     try {
-      BrowseAdmin = (await import("AppCache/dsearchtreeDatecode2")).default;
+      // The layer two spec repeats the where parameter on every SQL controller
+      // path, so its gruim cannot generate modules. Until that is fixed the
+      // admin module comes from layer one; the search API still uses the cache.
+      BrowseAdmin = (await import("App/Datecode2")).default;
     } catch (error) {
       browseError = message(error);
     } finally {

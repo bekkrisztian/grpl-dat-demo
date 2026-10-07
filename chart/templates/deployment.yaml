@@ -43,11 +43,6 @@ spec:
                 configMapKeyRef:
                   name: "{{ .Release.Namespace }}-{{ .Release.Name }}-gras-gruim-muim"
                   key: remoteentry
-            - name: SVELTE_APP_CACHE_REMOTE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: "{{ .Release.Namespace }}-{{ .Release.Name }}-grascache-gruim-muim"
-                  key: remoteentry
           command:
             - sh
             - -c
@@ -60,12 +55,6 @@ spec:
                   sleep 1
                   echo -n '.'
               done || echo "\n\nERROR: could not reach: ${SVELTE_APP_REMOTE_URL}/dashboard.json after 10 minutes"
-              export SVELTE_APP_CACHE_REMOTE_URL=$(echo "${SVELTE_APP_CACHE_REMOTE_URL}" | sed "s,/remoteEntry.js,,g")
-              echo "testing: curl -k -Is ${SVELTE_APP_CACHE_REMOTE_URL}/dashboard.json | head -1"
-              while ! curl -k -Is ${SVELTE_APP_CACHE_REMOTE_URL}/dashboard.json 2>/dev/null | head -1 | grep 200; do
-                  sleep 1
-                  echo -n '.'
-              done || echo "\n\nERROR: could not reach: ${SVELTE_APP_CACHE_REMOTE_URL}/dashboard.json after 10 minutes"
   
       containers:
         - name: {{ .Chart.Name }}
@@ -85,11 +74,6 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: "{{ .Release.Namespace }}-{{ .Release.Name }}-gras-gruim-muim"
-                  key: remoteentry
-            - name: SVELTE_APP_CACHE_REMOTE_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: "{{ .Release.Namespace }}-{{ .Release.Name }}-grascache-gruim-muim"
                   key: remoteentry
             - name: SVELTE_APP_API_ENDPOINT
               valueFrom:

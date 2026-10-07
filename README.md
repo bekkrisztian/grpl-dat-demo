@@ -65,7 +65,7 @@ controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
 Gruim is used for the browse tab, which loads
-`AppCache/dsearchtreeDatecode2` from the layer-two Gruim over module federation. The
+`App/Datecode2` from the layer-one Gruim over module federation. The
 search screens call the same cached Grapi through the `/dsearchtree` prefix.
 The module is imported on demand and the tab explains itself when the remote is
 absent, as in local Docker runs.

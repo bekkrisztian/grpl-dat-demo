@@ -50,10 +50,9 @@ pipelines:
       reset-values-file
       wait-for-deployment ${APP_NAME}-gras-grapi 600
       # the cache layer is created last: its grapi waits for layer one first
-      wait-for-deployment ${APP_NAME}-grascache-gruim 600
+      wait-for-deployment ${APP_NAME}-grascache-grapi 600
       start_dev grapi &
       start_dev gruim &
-      start_dev gruim-cache &
       start_dev app                # 4. Start dev mode \"app\" (see \"dev\" section)
   # You can run this pipeline via `devspace deploy` (or `devspace run-pipeline deploy`)
   deploy:
@@ -186,37 +185,6 @@ dev:
       - port: "8080:8080"
     open:
       - url: http://localhost:8080
-  gruim-cache:
-    labelSelector:
-      app.kubernetes.io/name: gruim
-      grpl.io/resourceName: ${APP_NAME}-grascache-gruim
-    devImage: grpl/gruim:0.3.62
-    command:
-      - sh
-      - -c
-      - |
-        ./rebuild-assets.sh &&
-        mkdir -p /tmp/devspace-custom-components ./src/lib/custom-components &&
-        cp -R /tmp/devspace-custom-components/. ./src/lib/custom-components/ &&
-        test -f ./src/lib/custom-components/list.json || printf '[]\n' > ./src/lib/custom-components/list.json &&
-        ./rebuild-assets/sync.sh &&
-        pnpm dev
-    env:
-      - name: DEV
-        value: "true"
-      - name: NODE_OPTIONS
-        value: "--dns-result-order=ipv4first"
-    sync:
-      - path: ./grases/grascache/gruim/custommodules/.:/tmp/devspace-custom-components/.
-        disableDownload: true
-        initialSync: mirrorLocal
-        startContainer: true
-        excludePaths:
-          - README.md
-    ports:
-      - port: "8081:8080"
-    open:
-      - url: http://localhost:8081
   grapi:
     # Search for the container that runs this image
     labelSelector:

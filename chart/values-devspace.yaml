@@ -16,9 +16,6 @@ grases:
     grapi:
       ssl: false
       dev: true
-    gruim:
-      ssl: false
-      dev: true
 
 
 ingress:
