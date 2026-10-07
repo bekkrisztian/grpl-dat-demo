@@ -76,12 +76,14 @@ module.exports = {
       ...includeEnv(),
       "process.env.SVELTE_APP_API_URL": JSON.stringify(process.env.SVELTE_APP_API_URL || ""),
       "process.env.SVELTE_APP_REMOTE_URL": JSON.stringify(process.env.SVELTE_APP_REMOTE_URL || ""),
+      "process.env.SVELTE_APP_CACHE_REMOTE_URL": JSON.stringify(process.env.SVELTE_APP_CACHE_REMOTE_URL || ""),
     }),
     new ModuleFederationPlugin({
       name: "client",
       filename: "remoteEntry.js",
       remotes: {
         App: `${process.env.CONTAINER_NAME}@${process.env.SVELTE_APP_REMOTE_URL}/remoteEntry.js`,
+        AppCache: `${process.env.CACHE_CONTAINER_NAME}@${process.env.SVELTE_APP_CACHE_REMOTE_URL}/remoteEntry.js`,
       },
       exposes: {},
       shared: {

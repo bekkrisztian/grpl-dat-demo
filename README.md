@@ -7,7 +7,7 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - Cascading vehicle search: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
-- A browse tab that embeds the generated gruim admin module for `datecode2`
+- A browse tab that embeds the cached Gruim admin module for `datecode2`
 
 The demo contains both requested screens and talks directly to the DAT layer-one
 LoopBack API. A Redis-backed layer-two API exposes the cached OpenAPI proxy and
@@ -64,10 +64,11 @@ layer-two proxy at <http://localhost:3334>, and the demo UI at
 controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
-Gruim is used for the browse tab, which loads `App/Datecode2` over module
-federation. The two search screens do not need it, so the module is imported on
-demand and the tab explains itself when the remote is absent, as in local Docker
-runs.
+Gruim is used for the browse tab, which loads
+`AppCache/dsearchtreeDatecode2` from the layer-two Gruim over module federation. The
+search screens call the same cached Grapi through the `/dsearchtree` prefix.
+The module is imported on demand and the tab explains itself when the remote is
+absent, as in local Docker runs.
 
 ## API behavior
 

@@ -5,3 +5,9 @@ declare module "App/*" {
   const component: ComponentType;
   export default component;
 }
+
+declare module "AppCache/*" {
+  import type { ComponentType } from "svelte";
+  const component: ComponentType;
+  export default component;
+}

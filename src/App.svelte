@@ -63,7 +63,7 @@
     browseLoading = true;
     browseError = "";
     try {
-      BrowseAdmin = (await import("App/Datecode2")).default;
+      BrowseAdmin = (await import("AppCache/dsearchtreeDatecode2")).default;
     } catch (error) {
       browseError = message(error);
     } finally {
