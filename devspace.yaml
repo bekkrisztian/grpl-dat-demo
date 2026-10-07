@@ -52,6 +52,7 @@ pipelines:
       # the cache layer is created last: its grapi waits for layer one first
       wait-for-deployment ${APP_NAME}-grascache-grapi 600
       start_dev grapi &
+      start_dev grapi-cache &
       start_dev gruim &
       start_dev app                # 4. Start dev mode \"app\" (see \"dev\" section)
   # You can run this pipeline via `devspace deploy` (or `devspace run-pipeline deploy`)
@@ -211,6 +212,18 @@ dev:
       - port: "3000:3000"
     open:
       - url: http://localhost:3000
+  grapi-cache:
+    # The cache layer serves the API the frontend talks to; it has no injections
+    # of its own, so this target only forwards the port.
+    labelSelector:
+      app.kubernetes.io/name: grapi
+      grpl.io/resourceName: ${APP_NAME}-grascache-grapi
+    devImage: grpl/loopback:0.4.25
+    env:
+      - name: DEV
+        value: "true"
+    ports:
+      - port: "3001:3000"
 # Use the `commands` section to define repeatable dev workflows for this project 
 commands:
   gruim:

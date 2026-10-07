@@ -162,12 +162,12 @@ grases:
                   sleep 5
                 done
       datasources:
-        - name: redisDS
+        - name: redis
           spec:
             kv-redis:
               db: $(db)
               host: $(host)
-              name: redisDS
+              name: redis
               password: $(password)
               port: $(port)
               url: ""
@@ -181,7 +181,7 @@ grases:
         - name: dsearchtree
           spec:
             openApis: dsearchtree
-            redisDS: redisDS
+            redisDS: redis
             cacheTTL: 6000000
       models: []
       repositories: []
