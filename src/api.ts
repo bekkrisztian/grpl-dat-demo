@@ -30,9 +30,10 @@ export type Criteria = {
   ut: string;
 };
 
-const apiUrl = (process.env.SVELTE_APP_API_URL || "http://localhost:3333").replace(/\/$/, "");
+const apiUrl = (process.env.SVELTE_APP_API_URL || "").replace(/\/$/, "");
 
 const request = async <T>(path: string, query: Record<string, unknown> = {}): Promise<T> => {
+  if (!apiUrl) throw new Error("SVELTE_APP_API_URL is not configured.");
   const url = new URL(`${apiUrl}${path}`);
   Object.entries(query).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
