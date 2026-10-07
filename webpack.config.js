@@ -75,6 +75,7 @@ module.exports = {
     new webpack.DefinePlugin({
       ...includeEnv(),
       "process.env.SVELTE_APP_API_URL": JSON.stringify(process.env.SVELTE_APP_API_URL || ""),
+      "process.env.SVELTE_APP_TREE_API_URL": JSON.stringify(process.env.SVELTE_APP_TREE_API_URL || ""),
       "process.env.SVELTE_APP_REMOTE_URL": JSON.stringify(process.env.SVELTE_APP_REMOTE_URL || ""),
     }),
     new ModuleFederationPlugin({

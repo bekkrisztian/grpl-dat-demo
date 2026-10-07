@@ -80,6 +80,11 @@ spec:
                 configMapKeyRef:
                   name: "{{ .Release.Namespace }}-{{ .Release.Name }}-grascache-grapi-mapi"
                   key: endpoint
+            - name: SVELTE_APP_TREE_API_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: "{{ .Release.Namespace }}-{{ .Release.Name }}-gras-grapi-mapi"
+                  key: endpoint
           {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}
