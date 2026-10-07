@@ -44,6 +44,7 @@ grases:
               password: $(password)
               port: $(port)
               url: ""
+              user: $(username)
       discoveries:
         - name: dsearchtree
           spec:
@@ -137,7 +138,6 @@ grases:
               password: $(password)
               port: $(port)
               url: ""
-              user: $(username)
       openapis:
         - name: dsearchtree
           spec:
