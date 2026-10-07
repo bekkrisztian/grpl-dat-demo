@@ -7,6 +7,12 @@ fi
 export SVELTE_APP_REMOTE_URL=$(echo "${SVELTE_APP_REMOTE_URL:-}" | sed "s,/remoteEntry.js,,g")
 export SVELTE_APP_CACHE_REMOTE_URL=$(echo "${SVELTE_APP_CACHE_REMOTE_URL:-}" | sed "s,/remoteEntry.js,,g")
 
+if [ -z "${SVELTE_APP_API_URL:-}" ] && [ -n "${SVELTE_APP_API_ENDPOINT:-}" ]; then
+    export SVELTE_APP_API_URL="$(echo "${SVELTE_APP_API_ENDPOINT}" | sed 's,/$,,')/dsearchtree"
+fi
+export SVELTE_APP_API_URL=$(echo "${SVELTE_APP_API_URL:-http://localhost:3333}" | sed 's,/$,,')
+echo "SVELTE_APP_API_URL = ${SVELTE_APP_API_URL}"
+
 if [ -n "${SVELTE_APP_REMOTE_URL}" ]; then
     if [ -z "${CONTAINER_NAME:-}" ]; then
         export CONTAINER_NAME=$(curl -s -k "${SVELTE_APP_REMOTE_URL}/dashboard.json" | jq -r '.name')

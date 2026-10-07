@@ -30,14 +30,7 @@ export type Criteria = {
   ut: string;
 };
 
-const remoteUrl = (process.env.SVELTE_APP_REMOTE_URL || "").replace(/\/remoteEntry\.js$/, "").replace(/\/$/, "");
-const cacheRemoteUrl = (process.env.SVELTE_APP_CACHE_REMOTE_URL || "").replace(/\/remoteEntry\.js$/, "").replace(/\/$/, "");
-const apiUrl = (
-  process.env.SVELTE_APP_API_URL
-  || (cacheRemoteUrl ? `${cacheRemoteUrl.replace(/-gruim(?=\.)/, "-grapi")}/dsearchtree` : "")
-  || (remoteUrl ? remoteUrl.replace(/-gruim(?=\.)/, "-grapi") : "")
-  || "http://localhost:3333"
-).replace(/\/$/, "");
+const apiUrl = (process.env.SVELTE_APP_API_URL || "http://localhost:3333").replace(/\/$/, "");
 
 const request = async <T>(path: string, query: Record<string, unknown> = {}): Promise<T> => {
   const url = new URL(`${apiUrl}${path}`);

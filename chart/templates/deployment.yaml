@@ -91,6 +91,11 @@ spec:
                 configMapKeyRef:
                   name: "{{ .Release.Namespace }}-{{ .Release.Name }}-grascache-gruim-muim"
                   key: remoteentry
+            - name: SVELTE_APP_API_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: "{{ .Release.Namespace }}-{{ .Release.Name }}-grascache-grapi-mapi"
+                  key: endpoint
           {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}
