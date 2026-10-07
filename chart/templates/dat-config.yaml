@@ -29,7 +29,6 @@ stringData:
     modelRangeByVehicleTypeAndManufacturer:{"query":"select FZA, HST, HSTB, OTG, OTGB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" group by FZA, HST, HSTB, OTG, OTGB order by FZA, OTGB;","path":"modelRangeByVehicleTypeAndManufacturer","controllerName":"modelRangeByVehicleTypeAndManufacturer"}|
     modelGroupByVehicleTypeAndManufacturerAndModelRange:{"query":"select FZA, HST, HSTB, OTG, OTGB, HT, HTB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" and OTG = \"${OTG}\" group by FZA, HST, HSTB, OTG, OTGB, HT, HTB order by FZA, HSTB, OTGB;","path":"modelGroupByVehicleTypeAndManufacturerAndModelRange","controllerName":"modelGroupByVehicleTypeAndManufacturerAndModelRange"}|
     modelByVehicleTypeAndManufacturerAndModelGroup:{"query":"select FZA, HST, HSTB, HT, HTB, UT, UTB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" and HT = \"${HT}\" group by FZA, HST, HSTB, HT, HTB, UT, UTB order by FZA, HSTB;","path":"modelByVehicleTypeAndManufacturerAndModelGroup","controllerName":"modelByVehicleTypeAndManufacturerAndModelGroup"}
-{{- $datRedis := default dict (default dict .Values.secrets).datRedis }}
 ---
 apiVersion: v1
 kind: Secret
@@ -37,9 +36,10 @@ metadata:
   name: dat-layer2-config
 type: Opaque
 stringData:
-  host: {{ default "" $datRedis.host | quote }}
-  port: {{ default "6379" $datRedis.port | quote }}
-  password: {{ default "" $datRedis.password | quote }}
-  db: {{ default "0" $datRedis.db | quote }}
+  # KubeBlocks serves the cache in this namespace and owns its password, which
+  # reaches the pod through the <release>-redis-account-default secret.
+  host: {{ printf "%s-redis-redis" .Release.Name | quote }}
+  port: "6379"
+  db: "0"
   MCP_CONFIGS: '{"enable":true}'
   LoggingConfigs: 'dsearchtree:{"loglevel":"info","httplog":true,"global":true,"group":"logging"}'

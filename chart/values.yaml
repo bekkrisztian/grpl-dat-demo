@@ -9,11 +9,6 @@ secrets:
     username: ""
     password: ""
     database: "dsearchtree"
-  datRedis:
-    host: ""
-    port: "6379"
-    password: ""
-    db: "0"
 gras-deploy:
   enabled: false
 grases:
@@ -56,9 +51,7 @@ grases:
         - name: dsearchtree
           spec:
             datasource: dsearchtree
-      fuzzysearch:
-        - name: datecode2
-          content: 'dsearchtree:{"fuzzy":true,"centralFuzzy":false,"datasource":"dsearchtree","appName":"Grpl","include":"datecode2","subPath":""}'
+      fuzzysearch: []
       models: []
       repositories: []
       relations: []
@@ -118,7 +111,20 @@ grases:
         maxReplicas: 1
       extraSecrets:
         - dat-layer2-config
+        - dat-demo-redis-account-default
       initContainers:
+        - name: init-redis
+          spec:
+            name: init-redis
+            image: redis:7.2
+            command:
+              - sh
+              - -c
+              - |
+                until redis-cli -h $(host) -p $(port) -a $(password) PING | grep -q PONG; do
+                  echo "cache is not available yet"
+                  sleep 2
+                done
         - name: wait-for-dat-api
           spec:
             name: wait-for-dat-api

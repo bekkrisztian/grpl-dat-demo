@@ -54,7 +54,6 @@ pipelines:
       start_dev grapi &
       start_dev gruim &
       start_dev gruim-cache &
-      if grpl > /dev/null 2>&1; then grpl gruim rebuild; fi
       start_dev app                # 4. Start dev mode \"app\" (see \"dev\" section)
   # You can run this pipeline via `devspace deploy` (or `devspace run-pipeline deploy`)
   deploy:
