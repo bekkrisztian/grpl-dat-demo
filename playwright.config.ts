@@ -72,7 +72,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run start -- --no-open',
+    command: 'SVELTE_APP_API_URL=http://localhost:3333 npm run start -- --no-open',
     url: 'http://127.0.0.1:4000',
     reuseExistingServer: !process.env.CI,
   },

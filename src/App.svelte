@@ -6,6 +6,10 @@
     emptyCriteria,
     findVehicles,
     fuzzySearchVehicles,
+    loadAllBrands,
+    loadAllModelGroups,
+    loadAllModelRanges,
+    loadAllModels,
     loadBrands,
     loadModelGroups,
     loadModelRanges,
@@ -94,7 +98,13 @@
 
   onMount(async () => {
     try {
-      vehicleTypes = await loadVehicleTypes();
+      [vehicleTypes, fuzzyBrands, fuzzyRanges, fuzzyGroups, fuzzyModels] = await Promise.all([
+        loadVehicleTypes(),
+        loadAllBrands(),
+        loadAllModelRanges(),
+        loadAllModelGroups(),
+        loadAllModels(),
+      ]);
     } catch (error) {
       startupError = message(error);
     } finally {
@@ -149,42 +159,6 @@
     treeLoading = "results"; treeError = ""; treeSearched = true;
     try { treeResults = await findVehicles(treeCriteria); } catch (error) { treeError = message(error); treeResults = []; }
     finally { treeLoading = ""; }
-  };
-
-  const fuzzyFzaChanged = async () => {
-    resetAfter(fuzzyCriteria, "fza");
-    fuzzyBrands = []; fuzzyRanges = []; fuzzyGroups = []; fuzzyModels = [];
-    if (!fuzzyCriteria.fza) return;
-    fuzzyLoading = "hst"; fuzzyError = "";
-    try { fuzzyBrands = await loadBrands(fuzzyCriteria.fza); } catch (error) { fuzzyError = message(error); }
-    finally { fuzzyLoading = ""; }
-  };
-
-  const fuzzyHstChanged = async () => {
-    resetAfter(fuzzyCriteria, "hst");
-    fuzzyRanges = []; fuzzyGroups = []; fuzzyModels = [];
-    if (!fuzzyCriteria.hst) return;
-    fuzzyLoading = "otg"; fuzzyError = "";
-    try { fuzzyRanges = await loadModelRanges(fuzzyCriteria.fza, fuzzyCriteria.hst); } catch (error) { fuzzyError = message(error); }
-    finally { fuzzyLoading = ""; }
-  };
-
-  const fuzzyOtgChanged = async () => {
-    resetAfter(fuzzyCriteria, "otg");
-    fuzzyGroups = []; fuzzyModels = [];
-    if (!fuzzyCriteria.otg) return;
-    fuzzyLoading = "ht"; fuzzyError = "";
-    try { fuzzyGroups = await loadModelGroups(fuzzyCriteria.fza, fuzzyCriteria.hst, fuzzyCriteria.otg); } catch (error) { fuzzyError = message(error); }
-    finally { fuzzyLoading = ""; }
-  };
-
-  const fuzzyHtChanged = async () => {
-    resetAfter(fuzzyCriteria, "ht");
-    fuzzyModels = [];
-    if (!fuzzyCriteria.ht) return;
-    fuzzyLoading = "ut"; fuzzyError = "";
-    try { fuzzyModels = await loadModels(fuzzyCriteria.fza, fuzzyCriteria.hst, fuzzyCriteria.ht); } catch (error) { fuzzyError = message(error); }
-    finally { fuzzyLoading = ""; }
   };
 
   const runFuzzySearch = async () => {
@@ -254,11 +228,11 @@
             <input id="fuzzy-text" bind:value={fuzzyText} placeholder="e.g. BMW diesel automatic" class="w-full rounded-lg border border-slate-300 px-4 py-3 shadow-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
           </label>
           <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <div on:change={fuzzyFzaChanged}><FilterSelect id="fuzzy-fza" label="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional /></div>
-            <div on:change={fuzzyHstChanged}><FilterSelect id="fuzzy-hst" label="HST" bind:value={fuzzyCriteria.hst} options={fuzzyBrands} disabled={!fuzzyCriteria.fza} loading={fuzzyLoading === "hst"} optional /></div>
-            <div on:change={fuzzyOtgChanged}><FilterSelect id="fuzzy-otg" label="OTG" bind:value={fuzzyCriteria.otg} options={fuzzyRanges} disabled={!fuzzyCriteria.hst} loading={fuzzyLoading === "otg"} optional /></div>
-            <div on:change={fuzzyHtChanged}><FilterSelect id="fuzzy-ht" label="HT" bind:value={fuzzyCriteria.ht} options={fuzzyGroups} disabled={!fuzzyCriteria.otg} loading={fuzzyLoading === "ht"} optional /></div>
-            <FilterSelect id="fuzzy-ut" label="UT" bind:value={fuzzyCriteria.ut} options={fuzzyModels} disabled={!fuzzyCriteria.ht} loading={fuzzyLoading === "ut"} optional />
+            <FilterSelect id="fuzzy-fza" label="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional />
+            <FilterSelect id="fuzzy-hst" label="HST" bind:value={fuzzyCriteria.hst} options={fuzzyBrands} loading={initialLoading} optional />
+            <FilterSelect id="fuzzy-otg" label="OTG" bind:value={fuzzyCriteria.otg} options={fuzzyRanges} loading={initialLoading} optional />
+            <FilterSelect id="fuzzy-ht" label="HT" bind:value={fuzzyCriteria.ht} options={fuzzyGroups} loading={initialLoading} optional />
+            <FilterSelect id="fuzzy-ut" label="UT" bind:value={fuzzyCriteria.ut} options={fuzzyModels} loading={initialLoading} optional />
           </div>
           <button type="submit" class="mt-5 rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300" disabled={!fuzzyText.trim() || fuzzyLoading === "results"}>
             {fuzzyLoading === "results" ? "Searching…" : "Find vehicles"}

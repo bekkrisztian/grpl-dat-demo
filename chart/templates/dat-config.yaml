@@ -21,6 +21,10 @@ type: Opaque
 stringData:
   SQLController: >-
     vehicleTypes:{"query":"select FZA, FZAB from dsearchtree.datecode2 where FZA like \"${FZA}\" group by FZA, FZAB order by FZA;","path":"vehicleTypes","controllerName":"vehicleTypes"}|
+    brands:{"query":"select HST, HSTB from dsearchtree.datecode2 where HST like \"${HST}\" group by HST, HSTB order by HSTB;","path":"brands","controllerName":"brands"}|
+    modelRanges:{"query":"select OTG, OTGB from dsearchtree.datecode2 where OTG like \"${OTG}\" group by OTG, OTGB order by OTGB;","path":"modelRanges","controllerName":"modelRanges"}|
+    modelGroups:{"query":"select HT, HTB from dsearchtree.datecode2 where HT like \"${HT}\" group by HT, HTB order by HTB;","path":"modelGroups","controllerName":"modelGroups"}|
+    models:{"query":"select UT, UTB from dsearchtree.datecode2 where UT like \"${UT}\" group by UT, UTB order by UTB;","path":"models","controllerName":"models"}|
     brandsByVehicleType:{"query":"select FZA, HST, HSTB from dsearchtree.datecode2 where FZA = \"${FZA}\" group by FZA, HST, HSTB order by FZA, HSTB;","path":"brandsByVehicleType","controllerName":"brandsByVehicleType"}|
     modelRangeByVehicleTypeAndManufacturer:{"query":"select FZA, HST, HSTB, OTG, OTGB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" group by FZA, HST, HSTB, OTG, OTGB order by FZA, OTGB;","path":"modelRangeByVehicleTypeAndManufacturer","controllerName":"modelRangeByVehicleTypeAndManufacturer"}|
     modelGroupByVehicleTypeAndManufacturerAndModelRange:{"query":"select FZA, HST, HSTB, OTG, OTGB, HT, HTB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" and OTG = \"${OTG}\" group by FZA, HST, HSTB, OTG, OTGB, HT, HTB order by FZA, HSTB, OTGB;","path":"modelGroupByVehicleTypeAndManufacturerAndModelRange","controllerName":"modelGroupByVehicleTypeAndManufacturerAndModelRange"}|

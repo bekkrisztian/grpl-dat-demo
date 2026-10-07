@@ -30,6 +30,11 @@ test.beforeEach(async ({ page }) => {
       }
       return json([vehicle]);
     }
+    if (url.pathname === '/brands') return json([{ HST: '130', HSTB: 'BMW' }]);
+    if (url.pathname === '/modelRanges') return json([{ OTG: '3', OTGB: '3' }]);
+    if (url.pathname === '/modelGroups') return json([{ HT: '42', HTB: '3er (G20)' }]);
+    if (url.pathname === '/models') return json([{ UT: '7', UTB: '320d xDrive' }]);
+    if (url.pathname === '/dsearchtree/datecode2s/fuzzy/BMW%20diesel%20automatic') return json([vehicle]);
     if (url.pathname === '/brandsByVehicleType') return json([{ FZA: '1', HST: '130', HSTB: 'BMW' }]);
     if (url.pathname === '/modelRangeByVehicleTypeAndManufacturer') return json([{ OTG: '3', OTGB: '3' }]);
     if (url.pathname === '/modelGroupByVehicleTypeAndManufacturerAndModelRange') return json([{ HT: '42', HTB: '3er (G20)' }]);
@@ -57,6 +62,7 @@ test('runs fuzzy text search with optional criteria', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Fuzzy search' }).click();
   await page.locator('#fuzzy-text').fill('BMW diesel automatic');
+  await page.locator('#fuzzy-hst').selectOption('130');
   await page.getByRole('button', { name: 'Find vehicles' }).click();
 
   await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();

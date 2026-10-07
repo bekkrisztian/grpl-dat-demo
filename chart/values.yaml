@@ -56,6 +56,9 @@ grases:
         - name: dsearchtree
           spec:
             datasource: dsearchtree
+      fuzzysearch:
+        - name: datecode2
+          content: 'dsearchtree:{"fuzzy":true,"centralFuzzy":false,"datasource":"dsearchtree","appName":"Grpl","include":"datecode2","subPath":""}'
       models: []
       repositories: []
       relations: []

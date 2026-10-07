@@ -91,6 +91,14 @@ const sqlOptions = async (
 
 export const loadBrands = (fza: string) => sqlOptions("/brandsByVehicleType", { FZA: fza }, "HST", "HSTB");
 
+export const loadAllBrands = () => sqlOptions("/brands", { HST: "%" }, "HST", "HSTB");
+
+export const loadAllModelRanges = () => sqlOptions("/modelRanges", { OTG: "%" }, "OTG", "OTGB");
+
+export const loadAllModelGroups = () => sqlOptions("/modelGroups", { HT: "%" }, "HT", "HTB");
+
+export const loadAllModels = () => sqlOptions("/models", { UT: "%" }, "UT", "UTB");
+
 export const loadModelRanges = (fza: string, hst: string) => sqlOptions(
   "/modelRangeByVehicleTypeAndManufacturer",
   { FZA: fza, HST: hst },
@@ -132,17 +140,17 @@ const byLabel = (left: Vehicle, right: Vehicle) =>
   || (left.utb ?? "").localeCompare(right.utb ?? "");
 
 export const fuzzySearchVehicles = async (text: string, criteria: Criteria, limit = 100) => {
-  const conditions: Record<string, unknown>[] = [
-    { globalSearch: { like: `%${text.trim()}%` } },
-    ...Object.entries(whereFromCriteria(criteria)).map(([key, value]) => ({ [key]: value })),
-  ];
-  // A leading wildcard cannot use an index, so ordering in the database makes
-  // it sort every match before the limit applies. Order the page here instead.
-  const rows = await request<Vehicle[]>("/datecode2s", {
-    filter: {
-      where: conditions.length === 1 ? conditions[0] : { and: conditions },
-      limit,
-    },
-  });
-  return rows.sort(byLabel);
+  type FuzzyResult = Vehicle | { item: Vehicle; score?: number };
+  const rows = await request<FuzzyResult[]>(
+    `/dsearchtree/datecode2s/fuzzy/${encodeURIComponent(text.trim())}`,
+    { useGlobalSearch: true, filter: { where: whereFromCriteria(criteria) } },
+  );
+  const selected = whereFromCriteria(criteria);
+  return rows
+    .map((row) => "item" in row ? row.item : row)
+    .filter((vehicle) => Object.entries(selected).every(([key, value]) =>
+      String(vehicle[key as keyof Vehicle] ?? "") === String(value),
+    ))
+    .sort(byLabel)
+    .slice(0, limit);
 };

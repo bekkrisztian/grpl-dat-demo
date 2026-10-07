@@ -81,13 +81,10 @@ therefore declares `vehicleTypes` with a `FZA like "${FZA}"` filter and the UI
 calls it with `%`; it falls back to the five known DAT categories if the call
 still fails.
 
-Fuzzy search uses a database-side, limited `globalSearch LIKE` query; the
-generated fuzzy endpoint is not used because an unfiltered request loads the
-full data set into memory.
-
-Fuzzy results are ordered in the client. A leading wildcard cannot use an index,
-so ordering in the database makes MySQL sort every match before the limit
-applies, which took ten to twelve seconds against the full table.
+Fuzzy search uses the generated DAT endpoint at
+`/dsearchtree/datecode2s/fuzzy/{searchTerm}`. The optional FZA, HST, OTG, HT and
+UT criteria are independent; the API receives them as a filter and the UI also
+applies them to the returned fuzzy results for compatibility with Grapi 0.4.25.
 
 ## Grapple cluster development
 
