@@ -32,24 +32,6 @@ grases:
       sslissuer: letsencrypt-grapple-demo
       autoscaling:
         maxReplicas: 3
-      # startupProbe:
-      #   httpGet:
-      #     path: /ping
-      #     port: 3000
-      #   failureThreshold: 120
-      #   periodSeconds: 5
-      # readinessProbe:
-      #   httpGet:
-      #     path: /ping
-      #     port: 3000
-      #   periodSeconds: 5
-      #   failureThreshold: 3
-      # livenessProbe:
-      #   httpGet:
-      #     path: /ping
-      #     port: 3000
-      #   periodSeconds: 10
-      #   failureThreshold: 3
       extraSecrets:
         - dat-db-config
         - dat-sqlcontrollers
@@ -91,7 +73,7 @@ grases:
         - name: init-modules
           spec:
             name: init-modules
-            image: grpl/grpl-dat-demo-modules:4cd0aa3
+            image: grpl/grpl-dat-demo-modules:dev
             imagePullPolicy: Always
             command: ["/bin/sh", "-c", "cp -r /modules/gras/. /opt/custom-modules/ && chown -R 1000:1000 /opt/custom-modules || true"]
             volumeMounts:
