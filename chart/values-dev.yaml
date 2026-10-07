@@ -18,6 +18,12 @@ grases:
       autorestartgruim: false
     gruim:
       ssl: false
+  grascache:
+    grapi:
+      ssl: false
+      autorestartgruim: false
+    gruim:
+      ssl: false
 
 
 ingress:

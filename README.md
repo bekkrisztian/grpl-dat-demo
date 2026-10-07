@@ -10,7 +10,8 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - A browse tab that embeds the generated gruim admin module for `datecode2`
 
 The demo contains both requested screens and talks directly to the DAT layer-one
-LoopBack API. Only the API endpoints used by the screens are generated.
+LoopBack API. A Redis-backed layer-two API exposes the cached OpenAPI proxy and
+MCP endpoint from the original setup.
 
 ## What you have to configure
 
@@ -18,8 +19,8 @@ The demo reads an **existing** DAT MySQL database. It neither provisions nor
 seeds one: the `datecode2` table holds roughly 570,000 rows, which is why the
 data stays outside the repository.
 
-Three values are environment specific and must be supplied; everything else is
-already in `chart/values.yaml` and needs no change.
+The DAT database and Redis connection values are environment specific and must
+be supplied; everything else is already in `chart/values.yaml`.
 
 | value | default | where you set it |
 | --- | --- | --- |
@@ -28,6 +29,9 @@ already in `chart/values.yaml` and needs no change.
 | `password` | none | same |
 | `port` | `3306` | `chart/values.yaml` |
 | `database` | `dsearchtree` | `chart/values.yaml` |
+
+Redis uses the corresponding `DAT_REDIS_*` variables in `.env` and
+`secrets.datRedis` in `chart/values-secret.yaml`. Never commit either password.
 
 `chart/values.yaml` also holds the parts that are not environment specific: the
 datasource shape, the discovery and REST CRUD configuration, and the four SQL
@@ -54,14 +58,11 @@ the API and frontend:
 docker compose up --build
 ```
 
-The DAT API is available at <http://localhost:3333> and the demo UI at
+The layer-one DAT API is available at <http://localhost:3333>, the Redis-backed
+layer-two proxy at <http://localhost:3334>, and the demo UI at
 <http://localhost:4000>. The first API startup generates the LoopBack models and
-controllers and can take approximately two minutes.
-
-The layer-two cache proxy from the original setup is not required: the measured
-endpoints answer in well under half a second, and its Redis host no longer
-resolves. Bring it back only for the MCP endpoint it also provided, and point it
-at an in-cluster Redis rather than the retired external one.
+controllers and can take approximately two minutes. Layer two uses layer one's
+internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
 Gruim is used for the browse tab, which loads `App/Datecode2` over module
 federation. The two search screens do not need it, so the module is imported on
@@ -90,12 +91,12 @@ applies, which took ten to twelve seconds against the full table.
 ## Grapple cluster development
 
 Create the git-ignored Helm values override before starting DevSpace. It carries
-only `host`, `username` and `password`; `port` and `database` come from
-`chart/values.yaml`.
+the DAT database and Redis connection details; their non-secret defaults come
+from `chart/values.yaml`.
 
 ```sh
 cp chart/values-secret.example.yaml chart/values-secret.yaml
-# Edit chart/values-secret.yaml with the DAT database host and credentials.
+# Edit chart/values-secret.yaml with the DAT database and Redis credentials.
 grpl dev ns <namespace>
 devspace dev
 ```
@@ -103,10 +104,10 @@ devspace dev
 `devspace.yaml` lists this file under `valuesFiles`, so DevSpace stops with
 `Error stating override file ... no such file or directory` when it is missing.
 
-The values render into the `dat-db-config` Secret, which `grapi.extraSecrets`
-mounts as environment variables. The datasource in `chart/values.yaml` then
-resolves them through `$(host)`, `$(username)` and `$(password)` at container
-start, which is why no credential ever lives in a committed file.
+The values render into separate `dat-db-config` and `dat-layer2-config` Secrets.
+Layer one uses MySQL; the `grascache` layer uses Redis, consumes layer one's
+internal OpenAPI endpoint, caches it, and enables MCP. No credential lives in a
+committed file.
 
 Helm's own commands need the cluster lookups disabled to run offline, in this
 chart and in the other Grapple demos alike:
@@ -129,7 +130,7 @@ the DAT integration. Verify that against a running API.
 
 ## Secrets
 
-Never commit DAT database credentials. Keep them in the git-ignored `.env` and
-`chart/values-secret.yaml`, and use the platform's secret store outside local
-development. This repository is public, so the database host counts as a
-credential too: the instance is reachable from the internet.
+Never commit DAT database or Redis credentials. Keep them in the git-ignored
+`.env` and `chart/values-secret.yaml`, and use the platform's secret store
+outside local development. Any credential shared in plain text should be
+rotated before deployment.

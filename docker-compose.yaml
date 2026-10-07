@@ -31,6 +31,32 @@ services:
       retries: 60
       start_period: 120s
 
+  dat-cache-api:
+    image: grpl/loopback:0.4.25
+    command: ["/bin/sh", "-c", "./start.sh"]
+    ports:
+      - "3334:3000"
+    environment:
+      DEV: "false"
+      DataSources: >-
+        redisDS:{"name":"redisDS","connector":"kv-redis","url":"","host":"${DAT_REDIS_HOST:?Set DAT_REDIS_HOST in .env}","port":"${DAT_REDIS_PORT:-6379}","user":"${DAT_REDIS_USER:-default}","password":"${DAT_REDIS_PASSWORD:?Set DAT_REDIS_PASSWORD in .env}","db":"${DAT_REDIS_DB:-0}"}
+      OpenApis: >-
+        dsearchtree:{"client":true,"prefix":"dsearchtree","url":"http://dat-api:3000/openapi.json"}
+      CacheConfigs: >-
+        dsearchtree:{"redisDS":"redisDS","cacheTTL":6000000}
+      LoggingConfigs: >-
+        dsearchtree:{"loglevel":"info","httplog":true,"global":true,"group":"logging"}
+      MCP_CONFIGS: '{"enable":true}'
+    depends_on:
+      dat-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 120s
+
   app:
     build:
       context: .

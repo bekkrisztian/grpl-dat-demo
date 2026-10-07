@@ -9,6 +9,12 @@ secrets:
     username: ""
     password: ""
     database: "dsearchtree"
+  datRedis:
+    host: ""
+    port: "6379"
+    username: "default"
+    password: ""
+    db: "0"
 gras-deploy:
   enabled: false
 grases:
@@ -26,6 +32,24 @@ grases:
       sslissuer: letsencrypt-grapple-demo
       autoscaling:
         maxReplicas: 3
+      # startupProbe:
+      #   httpGet:
+      #     path: /ping
+      #     port: 3000
+      #   failureThreshold: 120
+      #   periodSeconds: 5
+      # readinessProbe:
+      #   httpGet:
+      #     path: /ping
+      #     port: 3000
+      #   periodSeconds: 5
+      #   failureThreshold: 3
+      # livenessProbe:
+      #   httpGet:
+      #     path: /ping
+      #     port: 3000
+      #   periodSeconds: 10
+      #   failureThreshold: 3
       extraSecrets:
         - dat-db-config
         - dat-sqlcontrollers
@@ -67,7 +91,7 @@ grases:
         - name: init-modules
           spec:
             name: init-modules
-            image: grpl/grpl-dat-demo-modules:dev
+            image: grpl/grpl-dat-demo-modules:4cd0aa3
             imagePullPolicy: Always
             command: ["/bin/sh", "-c", "cp -r /modules/gras/. /opt/custom-modules/ && chown -R 1000:1000 /opt/custom-modules || true"]
             volumeMounts:
@@ -94,6 +118,77 @@ grases:
       custommodules: []
       prepatches: []
       postpatches: []
+  grascache:
+    enabled: true
+    gras: {}
+    grapi:
+      name: dat-demo-cache
+      runimages:
+        image: grpl/loopback
+        tag: "0.4.25"
+      discoveredrepos: false
+      ingress: true
+      ssl: true
+      sslissuer: letsencrypt-grapple-demo
+      autoscaling:
+        maxReplicas: 1
+      extraSecrets:
+        - dat-layer2-config
+      initContainers:
+        - name: wait-for-dat-api
+          spec:
+            name: wait-for-dat-api
+            image: curlimages/curl:8.7.1
+            command:
+              - sh
+              - -c
+              - |
+                until curl -sf http://gras-grapi:3000/openapi.json >/dev/null; do
+                  echo "DAT layer one is not available yet"
+                  sleep 5
+                done
+      datasources:
+        - name: redisDS
+          spec:
+            kv-redis:
+              db: $(db)
+              host: $(host)
+              name: redisDS
+              password: $(password)
+              port: $(port)
+              url: ""
+              user: $(username)
+      openapis:
+        - name: dsearchtree
+          spec:
+            url: http://gras-grapi:3000/openapi.json
+            prefix: dsearchtree
+            client: true
+      cacheconfigs:
+        - name: dsearchtree
+          spec:
+            openApis: dsearchtree
+            redisDS: redisDS
+            cacheTTL: 6000000
+      models: []
+      repositories: []
+      relations: []
+      controllers: []
+      postpatches: []
+      services: []
+      serviceproviders: []
+      prerelationpatches: []
+      prepatches: []
+      prediscoverypatches: []
+    gruim:
+      name: dat-demo-cache
+      runimages:
+        image: grpl/gruim
+        tag: "0.3.62"
+      ssl: true
+      sslissuer: letsencrypt-grapple-demo
+      autoscaling:
+        maxReplicas: 1
 replicaCount: 1
 image:
   repository: grpl/grpl-dat-demo
