@@ -44,12 +44,10 @@ pipelines:
       # build_images data -t data    # 3. Build, tag ("data") and push the data image (see "images")
       create_deployments --all     # 3. Deploy Helm charts and manifests specfied as "deployments"
       echo "waiting on chart deployment..."
-      # TODO: find a solution for windows (while is not working on windows)...
-      sleep 10
       reset-values-file
-      sleep 10
-      # while ! kubectl get deploy -l app.kubernetes.io/name=grapi 2>/dev/null | grep grapi; do echo -n \".\"; sleep 1; done
-      # kubectl get deploy -l app.kubernetes.io/name=grapi --for=condition=available
+      kubectl wait deployment -l app.kubernetes.io/name=grapi,grpl.io/resourceName=${APP_NAME}-gras-grapi --for=condition=Available --timeout=600s
+      kubectl wait deployment -l app.kubernetes.io/name=gruim,grpl.io/resourceName=${APP_NAME}-gras-gruim --for=condition=Available --timeout=600s
+      kubectl wait deployment -l app.kubernetes.io/name=gruim,grpl.io/resourceName=${APP_NAME}-grascache-gruim --for=condition=Available --timeout=600s
       start_dev grapi
       start_dev gruim
       start_dev gruim-cache

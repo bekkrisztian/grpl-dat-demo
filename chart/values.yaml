@@ -12,7 +12,6 @@ secrets:
   datRedis:
     host: ""
     port: "6379"
-    username: "default"
     password: ""
     db: "0"
 gras-deploy:
@@ -45,7 +44,6 @@ grases:
               password: $(password)
               port: $(port)
               url: ""
-              user: $(username)
       discoveries:
         - name: dsearchtree
           spec:
