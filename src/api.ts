@@ -30,11 +30,16 @@ export type Criteria = {
   ut: string;
 };
 
-const apiUrl = (process.env.SVELTE_APP_API_URL || "").replace(/\/$/, "");
+// Vehicle queries go through the Redis-backed cache layer. The SQL controllers
+// that feed the dropdowns cannot: the cache layer's generated client repeats
+// the where parameter on those paths, so the positional call drops sqlParams
+// and every lookup comes back empty. They address layer one directly.
+const cacheUrl = (process.env.SVELTE_APP_API_URL || "").replace(/\/$/, "");
+const treeUrl = (process.env.SVELTE_APP_TREE_API_URL || "").replace(/\/$/, "") || cacheUrl;
 
-const request = async <T>(path: string, query: Record<string, unknown> = {}): Promise<T> => {
-  if (!apiUrl) throw new Error("SVELTE_APP_API_URL is not configured.");
-  const url = new URL(`${apiUrl}${path}`);
+const request = async <T>(path: string, query: Record<string, unknown> = {}, base = cacheUrl): Promise<T> => {
+  if (!base) throw new Error("SVELTE_APP_API_URL is not configured.");
+  const url = new URL(`${base}${path}`);
   Object.entries(query).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
       url.searchParams.set(key, typeof value === "string" ? value : JSON.stringify(value));
@@ -82,7 +87,7 @@ const sqlOptions = async (
   valueKey: string,
   labelKey: string,
 ): Promise<Option[]> => {
-  const rows = await request<Record<string, unknown>[]>(path, { where: {}, sqlParams });
+  const rows = await request<Record<string, unknown>[]>(path, { where: {}, sqlParams }, treeUrl);
   return compact(rows.map((row) => ({
     value: String(row[valueKey] ?? ""),
     label: String(row[labelKey] ?? row[valueKey] ?? ""),
@@ -126,13 +131,26 @@ const whereFromCriteria = (criteria: Criteria) => Object.fromEntries(
     .map(([key, value]) => [key, key === "otg" ? value : Number(value)]),
 );
 
-export const findVehicles = (criteria: Criteria, limit = 100) => request<Vehicle[]>("/datecode2s", {
-  filter: {
+// A page the browser can render. Broad criteria match six figures of rows, so
+// the table asks for one page at a time and the count tells it how many exist.
+export const PAGE_SIZE = 100;
+
+export const countVehicles = async (criteria: Criteria) => {
+  const result = await request<{ count: number }>("/datecode2s/count", {
     where: whereFromCriteria(criteria),
-    order: ["hstb ASC", "htb ASC", "utb ASC"],
-    limit,
-  },
-});
+  });
+  return result.count;
+};
+
+export const findVehicles = (criteria: Criteria, offset = 0, limit = PAGE_SIZE) =>
+  request<Vehicle[]>("/datecode2s", {
+    filter: {
+      where: whereFromCriteria(criteria),
+      order: ["hstb ASC", "htb ASC", "utb ASC"],
+      limit,
+      offset,
+    },
+  });
 
 const byLabel = (left: Vehicle, right: Vehicle) =>
   (left.hstb ?? "").localeCompare(right.hstb ?? "")

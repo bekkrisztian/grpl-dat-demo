@@ -4,8 +4,10 @@
   import VehicleTable from "./VehicleTable.svelte";
   import {
     emptyCriteria,
+    countVehicles,
     findVehicles,
     fuzzySearchVehicles,
+    PAGE_SIZE,
     loadAllBrands,
     loadAllModelGroups,
     loadAllModelRanges,
@@ -85,6 +87,8 @@
   let treeModels: Option[] = [];
   let treeLoading = "";
   let treeResults: Vehicle[] = [];
+  let treeTotal = 0;
+  let treePage = 1;
   let treeSearched = false;
   let treeError = "";
 
@@ -158,9 +162,36 @@
     finally { treeLoading = ""; }
   };
 
+  const clearTree = () => {
+    treeCriteria = emptyCriteria();
+    treeBrands = []; treeRanges = []; treeGroups = []; treeModels = [];
+    treeResults = []; treeTotal = 0; treePage = 1; treeSearched = false; treeError = "";
+  };
+
   const runTreeSearch = async () => {
+    treePage = 1;
     treeLoading = "results"; treeError = ""; treeSearched = true;
-    try { treeResults = await findVehicles(treeCriteria); } catch (error) { treeError = message(error); treeResults = []; }
+    try {
+      // The count is cheap once the criteria narrow the set, and it is what
+      // turns a page number into a position the reader can trust.
+      [treeResults, treeTotal] = await Promise.all([
+        findVehicles(treeCriteria),
+        countVehicles(treeCriteria),
+      ]);
+    } catch (error) {
+      treeError = message(error); treeResults = []; treeTotal = 0;
+    } finally { treeLoading = ""; }
+  };
+
+  $: treePages = Math.max(1, Math.ceil(treeTotal / PAGE_SIZE));
+
+  const goToTreePage = async (page: number) => {
+    if (page < 1 || page > treePages || page === treePage || treeLoading) return;
+    treeLoading = "results"; treeError = "";
+    try {
+      treeResults = await findVehicles(treeCriteria, (page - 1) * PAGE_SIZE);
+      treePage = page;
+    } catch (error) { treeError = message(error); }
     finally { treeLoading = ""; }
   };
 
@@ -198,7 +229,7 @@
       <section aria-labelledby="tree-title">
         <div class="mb-6">
           <h2 id="tree-title" class="text-2xl font-bold">Structured vehicle selection</h2>
-          <p class="mt-1 text-slate-600">Choose each criterion from left to right, then list the matching vehicles.</p>
+          <p class="mt-1 text-slate-600">Narrow from left to right. You can list the vehicles at any depth, from the vehicle type down to a single model.</p>
         </div>
         <div class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
           <div on:change={treeFzaChanged}><FilterSelect id="tree-fza" label="FZA" bind:value={treeCriteria.fza} options={vehicleTypes} loading={initialLoading} /></div>
@@ -206,17 +237,26 @@
           <div on:change={treeOtgChanged}><FilterSelect id="tree-otg" label="OTG" bind:value={treeCriteria.otg} options={treeRanges} disabled={!treeCriteria.hst} loading={treeLoading === "otg"} /></div>
           <div on:change={treeHtChanged}><FilterSelect id="tree-ht" label="HT" bind:value={treeCriteria.ht} options={treeGroups} disabled={!treeCriteria.otg} loading={treeLoading === "ht"} /></div>
           <FilterSelect id="tree-ut" label="UT" bind:value={treeCriteria.ut} options={treeModels} disabled={!treeCriteria.ht} loading={treeLoading === "ut"} />
-          <div class="sm:col-span-2 lg:col-span-5">
-            <button class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300" disabled={!treeCriteria.ut || treeLoading === "results"} on:click={runTreeSearch}>
+          <div class="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-5">
+            <button class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300" disabled={!treeCriteria.fza || treeLoading === "results"} on:click={runTreeSearch}>
               {treeLoading === "results" ? "Loading vehicles…" : "Show vehicles"}
             </button>
+            {#if treeCriteria.fza}
+              <button class="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-900" on:click={clearTree}>Clear</button>
+            {/if}
           </div>
         </div>
         {#if treeError}<p role="alert" class="mt-4 text-sm text-red-700">{treeError}</p>{/if}
         <div class="mt-8">
           {#if treeSearched && !treeLoading && !treeResults.length && !treeError}<p class="rounded-lg bg-white p-6 text-center text-slate-500">No matching vehicles.</p>{/if}
-          {#if treeResults.length}<p class="mb-3 text-sm font-medium text-slate-600">{treeResults.length} vehicle{treeResults.length === 1 ? "" : "s"} shown</p>{/if}
-          <VehicleTable vehicles={treeResults} />
+          <VehicleTable vehicles={treeResults} total={treeTotal} offset={(treePage - 1) * PAGE_SIZE} />
+          {#if treePages > 1}
+            <nav class="mt-4 flex items-center justify-between gap-4" aria-label="Result pages">
+              <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300" disabled={treePage === 1 || !!treeLoading} on:click={() => goToTreePage(treePage - 1)}>Previous</button>
+              <span class="text-sm text-slate-600">Page <span class="font-semibold text-slate-900">{treePage.toLocaleString("en-US")}</span> of {treePages.toLocaleString("en-US")}</span>
+              <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300" disabled={treePage === treePages || !!treeLoading} on:click={() => goToTreePage(treePage + 1)}>Next</button>
+            </nav>
+          {/if}
         </div>
       </section>
     {:else if view === "fuzzy"}
@@ -244,7 +284,6 @@
         {#if fuzzyError}<p role="alert" class="mt-4 text-sm text-red-700">{fuzzyError}</p>{/if}
         <div class="mt-8">
           {#if fuzzySearched && !fuzzyLoading && !fuzzyResults.length && !fuzzyError}<p class="rounded-lg bg-white p-6 text-center text-slate-500">No matching vehicles.</p>{/if}
-          {#if fuzzyResults.length}<p class="mb-3 text-sm font-medium text-slate-600">{fuzzyResults.length} vehicle{fuzzyResults.length === 1 ? "" : "s"} shown</p>{/if}
           <VehicleTable vehicles={fuzzyResults} />
         </div>
       </section>

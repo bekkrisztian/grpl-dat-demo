@@ -20,7 +20,9 @@
   >
     <option value="">{loading ? "Loading…" : optional ? `Any ${label}` : `Select ${label}`}</option>
     {#each options as option}
-      <option value={option.value}>{option.label} ({option.value})</option>
+      <option value={option.value}>
+        {option.label === option.value ? `${label} ${option.value}` : `${option.label} (${option.value})`}
+      </option>
     {/each}
   </select>
 </label>

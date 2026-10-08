@@ -21,6 +21,7 @@ test.beforeEach(async ({ page }) => {
     const url = new URL(route.request().url());
     const json = (value: unknown) => route.fulfill({ json: value });
 
+    if (url.pathname === '/datecode2s/count') return json({ count: 1 });
     if (url.pathname === '/datecode2s') {
       const filter = url.searchParams.get('filter') || '';
       const parsedFilter = JSON.parse(filter);
@@ -66,5 +67,5 @@ test('runs fuzzy text search with optional criteria', async ({ page }) => {
   await page.getByRole('button', { name: 'Find vehicles' }).click();
 
   await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
-  await expect(page.getByText('1 vehicle shown')).toBeVisible();
+  await expect(page.getByText('1 vehicle', { exact: false })).toBeVisible();
 });
