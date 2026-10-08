@@ -7,35 +7,64 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - Cascading vehicle search: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
-- A browse tab that embeds the cached Gruim admin module for `datecode2`
+- A browse tab that embeds the layer-one Gruim admin module for `datecode2`
 
-The demo contains both requested screens and talks directly to the DAT layer-one
-LoopBack API. A Redis-backed layer-two API exposes the cached OpenAPI proxy and
-MCP endpoint from the original setup.
+Vehicle queries go through the Redis-backed layer-two API, which caches layer
+one's OpenAPI proxy and serves the MCP endpoint. The search tree's option lists
+address layer one directly: layer two's generated client repeats the `where`
+parameter on SQL controller paths, so a positional call drops `sqlParams` and
+every lookup comes back empty.
+
+## Project structure
+
+```text
+grpl-dat-demo/
+├── chart/
+│   ├── templates/          # Application, MySQL, Redis and Grapple resources
+│   └── values.yaml         # Layer-one, cache and Gruim configuration
+├── data/
+│   └── datecode2.sql.gz    # DAT database seed
+├── grases/
+│   ├── gras/
+│   │   ├── grapi/          # Layer-one controllers and generated-code patches
+│   │   └── gruim/          # Gruim bulk-fetch protection
+│   └── grascache/          # Cache-layer extensions
+├── src/                    # Svelte vehicle-search application
+├── tests/                  # Playwright UI tests
+├── docker-compose.yaml     # Local two-layer API setup
+├── devspace.yaml           # Grapple development workflow
+└── Taskfile.yaml           # Patch injection and deployment helpers
+```
 
 ## What you have to configure
 
-The demo reads an **existing** DAT MySQL database. It neither provisions nor
-seeds one: the `datecode2` table holds roughly 570,000 rows, which is why the
-data stays outside the repository.
+Where the data lives depends on how you run the demo.
 
-The DAT database and Redis connection values are environment specific and must
-be supplied; everything else is already in `chart/values.yaml`.
+**In a cluster, nothing.** The chart provisions its own MySQL and Redis through
+KubeBlocks and seeds `dsearchtree.datecode2` from `data/datecode2.sql.gz`, which
+is 3.4 MB in the repository and 142 MB once loaded. The `init-db` container only
+seeds when the table is empty, so a restart costs nothing; a first load takes
+about 30 seconds. Database credentials are generated into the
+`dat-demo-db-mysql-account-root` secret, so none of them belong in a file here.
 
-| value | default | where you set it |
-| --- | --- | --- |
-| `host` | none | `.env` (Docker) / `chart/values-secret.yaml` (Grapple) |
-| `username` | none | same |
-| `password` | none | same |
-| `port` | `3306` | `chart/values.yaml` |
-| `database` | `dsearchtree` | `chart/values.yaml` |
+**With Docker Compose, an external DAT database.** Compose starts the two APIs
+and the frontend but no database, so `.env` has to point at one:
 
-Redis uses the corresponding `DAT_REDIS_*` variables in `.env` and
-`secrets.datRedis` in `chart/values-secret.yaml`. Never commit either password.
+| variable | default |
+| --- | --- |
+| `DAT_DB_HOST`, `DAT_DB_USER`, `DAT_DB_PASSWORD` | none |
+| `DAT_DB_PORT` | `3306` |
+| `DAT_DB_NAME` | `dsearchtree` |
+| `DAT_REDIS_HOST`, `DAT_REDIS_PASSWORD` | none |
+| `DAT_REDIS_PORT`, `DAT_REDIS_USER`, `DAT_REDIS_DB` | `6379`, `default`, `0` |
 
-`chart/values.yaml` also holds the parts that are not environment specific: the
-datasource shape, the discovery and REST CRUD configuration, and the four SQL
-controllers behind the search tree. Both secret files are git-ignored.
+`.env` is git-ignored. Never commit a DAT database or Redis password, and rotate
+anything that has been shared in plain text.
+
+Everything that is not environment specific lives in `chart/values.yaml`: the
+datasource shape, discovery and REST CRUD configuration, the fuzzy search
+configuration, the nine SQL controllers, and the bulk-fetch bounds described
+under [Staying inside the memory budget](#staying-inside-the-memory-budget).
 
 ## Local frontend development
 
@@ -43,11 +72,15 @@ Requirements: Node.js 22 and pnpm 9.15.9.
 
 ```sh
 cp .env.example .env
+# When the APIs run locally, also set:
+# SVELTE_APP_TREE_API_URL=http://localhost:3333
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
 The frontend is available at <http://localhost:4000>.
+`SVELTE_APP_API_URL` must point to the cached API including its `/dsearchtree`
+prefix; `SVELTE_APP_TREE_API_URL` points to layer one without a path prefix.
 
 ## Complete Docker setup
 
@@ -64,11 +97,12 @@ layer-two proxy at <http://localhost:3334>, and the demo UI at
 controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
-Gruim is used for the browse tab, which loads
-`App/Datecode2` from the layer-one Gruim over module federation. The
-search screens call the same cached Grapi through the `/dsearchtree` prefix.
-The module is imported on demand and the tab explains itself when the remote is
-absent, as in local Docker runs.
+The browse tab loads `App/Datecode2` from the layer-one Gruim over module
+federation, and the module is imported on demand so the tab can explain itself
+when the remote is absent, as in local Docker runs. Vehicle queries go to the
+cached Grapi through the `/dsearchtree` prefix; the search tree's option lists
+go straight to layer one on `SVELTE_APP_TREE_API_URL`, for the reason given
+under [Scope](#scope).
 
 ## API behavior
 
@@ -81,31 +115,89 @@ therefore declares `vehicleTypes` with a `FZA like "${FZA}"` filter and the UI
 calls it with `%`; it falls back to the five known DAT categories if the call
 still fails.
 
-Fuzzy search uses the generated DAT endpoint at
-`/dsearchtree/datecode2s/fuzzy/{searchTerm}`. The optional FZA, HST, OTG, HT and
-UT criteria are independent; the API receives them as a filter and the UI also
-applies them to the returned fuzzy results for compatibility with Grapi 0.4.25.
+The option lists behind HST, OTG, HT and UT are search driven. They query from
+the second character, debounced by 250 ms, and the previous request is aborted
+when the next keystroke arrives. Each query splits its name and code branches
+into a `UNION` so both can use an index: an `OR` across two columns makes MySQL
+abandon the range scan and read the whole index, which measured 1.324 s against
+0.021 s for the same search. The matching indexes are created beside the seed,
+only when absent.
+
+Fuzzy search uses `/dsearchtrees/datecode2s/fuzzy/{searchTerm}` on layer one and
+`/dsearchtree/dsearchtrees/datecode2s/fuzzy/{searchTerm}` through the cache
+prefix. Its configuration must include `databaseName: dsearchtree`; otherwise
+the generated controller produces the invalid table name `.datecode2`. The
+`bound-fuzzy-search` postpatch routes the query through the repository so the
+criteria and the limit are applied instead of running an unbounded raw query.
+
+## Staying inside the memory budget
+
+`datecode2` holds 570,518 rows and the API's heap is capped at 2048 MB. It
+materialises every row it is asked for -- 5,000 rows cost 73 MB, so roughly
+140,000 rows exhaust it -- and when it dies, nodemon survives it: the pod stays
+`Running` with nothing listening, and the browser sees a 502. Reviving it costs
+one `touch` of a watched file rather than a pod delete:
+
+```sh
+kubectl -n <namespace> exec deploy/<release>-gras-grapi-devspace -c grapi \
+  -- touch dist/index.js
+```
+
+Two changes keep requests away from that ceiling.
+
+The UI asks for one page at a time. A single vehicle type matches 152,070 rows,
+so the result table pages at 100 and shows the true total beside the range.
+
+Gruim's "Select all" and its two export buttons each sent one request with no
+limit. `grases/gras/gruim/prepatches/page-bulk-fetches.sh` rewrites them to walk
+the table in pages, and warns rather than returning a truncated export when it
+stops at the ceiling:
+
+| key in `config.global` | default |
+| --- | --- |
+| `fetch-page-size` | 1000 |
+| `max-records` | 50000 |
+
+`task patch-values-file` base64-encodes the Gruim prepatch into the Helm values
+before deployment. The reset task clears that generated content afterwards, so
+the committed values file stays readable. A patch that cannot find the expected
+Gruim source exits non-zero instead of silently leaving the unsafe bulk request
+in place.
 
 ## Grapple cluster development
 
-Create the git-ignored Helm values override before starting DevSpace. It carries
-the DAT database and Redis connection details; their non-secret defaults come
-from `chart/values.yaml`.
-
 ```sh
-cp chart/values-secret.example.yaml chart/values-secret.yaml
-# Edit chart/values-secret.yaml with the DAT database and Redis credentials.
 grpl dev ns <namespace>
 devspace dev
 ```
 
-`devspace.yaml` lists this file under `valuesFiles`, so DevSpace stops with
-`Error stating override file ... no such file or directory` when it is missing.
+There is no secret file to prepare: the chart brings its own MySQL and Redis,
+and the generated credentials never leave the cluster.
 
-The values render into separate `dat-db-config` and `dat-layer2-config` Secrets.
-Layer one uses MySQL; the `grascache` layer uses Redis, consumes layer one's
-internal OpenAPI endpoint, caches it, and enables MCP. No credential lives in a
-committed file.
+DevSpace forwards the demo UI to port `4000`, layer-one Grapi to `3000`, the
+cached Grapi to `3001`, and Gruim to `8080`.
+
+Layer one serves MySQL. The `grascache` layer consumes layer one's internal
+OpenAPI endpoint, caches it in Redis and enables MCP. Its datasource is named
+`redis` rather than `redisDS` because a Crossplane `ManagedDataSource` name has
+to be an RFC 1123 subdomain, and an uppercase letter makes the release fail.
+
+The cache layer carries no Gruim of its own. Its OpenAPI spec duplicates the
+`where` parameter on every SQL controller path, which fails Gruim's Swagger
+validation outright and, through the generated client, silently empties the
+option lists. Both are generator bugs; until they are fixed the browse tab loads
+`App/Datecode2` from layer one.
+
+After a `helm upgrade`, the short `gras-grapi` service can end up selecting on a
+`helm.sh/revision` the running pods no longer carry, leaving it with no
+endpoints. Gruim's init container waits on exactly that service, so it sits in
+`Init:0/1` for its full 30 minute timeout. Dropping the label from the selector
+restores it without touching a pod:
+
+```sh
+kubectl -n <namespace> patch svc gras-grapi --type=json \
+  -p '[{"op":"remove","path":"/spec/selector/helm.sh~1revision"}]'
+```
 
 Helm's own commands need the cluster lookups disabled to run offline, in this
 chart and in the other Grapple demos alike:
@@ -123,12 +215,15 @@ pnpm exec playwright install --with-deps   # first run only
 pnpm test
 ```
 
-The Playwright tests stub every API response, so they cover the screens but not
-the DAT integration. Verify that against a running API.
+The three Playwright tests stub every API response, so they cover the screens but
+not the DAT integration. Verify that against a running API. They start their own
+dev server on port 4010, away from the one `pnpm dev` uses, because a server
+left running on the shared port is reused without the test environment and every
+mocked call then misses.
 
 ## Secrets
 
-Never commit DAT database or Redis credentials. Keep them in the git-ignored
-`.env` and `chart/values-secret.yaml`, and use the platform's secret store
-outside local development. Any credential shared in plain text should be
-rotated before deployment.
+In a cluster the demo generates its own credentials and none belong in the
+repository. For Docker Compose, keep the DAT database and Redis settings in the
+git-ignored `.env`, use the platform's secret store outside local development,
+and rotate anything that has been shared in plain text.
