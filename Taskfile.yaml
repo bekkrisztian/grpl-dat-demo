@@ -243,8 +243,7 @@ tasks:
             continue
           fi
           echo "Resetting grapi injections for ${GRAS_NAME} (${GRAPI_FOLDER})..."
-          # Fuzzy search is declarative chart configuration, not a temporary
-          # base64 injection. Keep it across DevSpace resets.
+          # Keep declarative fuzzy configuration during resets.
           GROUPS="injections controllers prerelationpatches postpatches prediscoverypatches prepatches models openapis repositories restcruds serviceproviders services cacheconfigs datasources relations"
           for group_name in ${GROUPS}; do
             if yq -e ".grases.${GRAS_NAME}.grapi.${group_name}[]" "{{.VALUES_YAML_PATH}}" >/dev/null 2>&1; then
@@ -438,9 +437,7 @@ tasks:
             done
           fi
 
-          # Gruim shell patches are injected separately from custom modules.
-          # Without this step files under gruim/prepatches and postpatches only
-          # exist locally and are never executed by the generated Gruim pod.
+          # Inject Gruim shell patches separately.
           for patch_folder in prepatches postpatches; do
             PATCHFILES=$(find "${GRUIM_FOLDER}/${patch_folder}" -type f -name '*.sh' 2>/dev/null | sort || true)
             if [ -z "${PATCHFILES}" ]; then

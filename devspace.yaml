@@ -49,7 +49,7 @@ pipelines:
       echo "waiting on chart deployment..."
       reset-values-file
       wait-for-deployment ${APP_NAME}-gras-grapi 600
-      # the cache layer is created last: its grapi waits for layer one first
+      # Cache Grapi depends on layer one.
       wait-for-deployment ${APP_NAME}-grascache-grapi 600
       start_dev grapi &
       start_dev grapi-cache &
@@ -150,8 +150,7 @@ dev:
       app.kubernetes.io/name: gruim
       grpl.io/resourceName: ${APP_NAME}-gras-gruim
     devImage: grpl/gruim:0.3.62
-    # The -img deployment starts nginx on a prebuilt image. The dev image has no
-    # assets, so build them here and run the dev server instead.
+    # Build assets before starting the Gruim dev server.
     command:
       - sh
       - -c
@@ -213,8 +212,7 @@ dev:
     open:
       - url: http://localhost:3000
   grapi-cache:
-    # The cache layer serves the API the frontend talks to; it has no injections
-    # of its own, so this target only forwards the port.
+    # Cache Grapi only needs port forwarding.
     labelSelector:
       app.kubernetes.io/name: grapi
       grpl.io/resourceName: ${APP_NAME}-grascache-grapi

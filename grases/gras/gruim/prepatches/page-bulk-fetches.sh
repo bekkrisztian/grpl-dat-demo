@@ -1,14 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Gruim's getAllRecords and getAllRecordsWithRelations each send one request
-# with no limit, so "Select All Items" and the two export buttons ask the API
-# for every row at once. datecode2 holds 570518 rows: the API exceeds its
-# 2048 MB heap while building the answer and dies, which reaches the browser as
-# a 502 and leaves the pod Running with a dead node process inside.
-#
-# Walk the table in pages instead. Both bounds are read from config.global, next
-# to the list-size key gruim already honours.
+# Page Gruim bulk actions to prevent Grapi heap exhaustion.
 
 node <<'NODE'
 const fs = require("fs");
@@ -31,7 +24,7 @@ const limitDeclaration =
 
 const limitDeclarationWithBounds = `${limitDeclaration}
 
-  // Bounds for the bulk fetches below; see page-bulk-fetches.sh.
+  // Bulk-fetch bounds.
   const fetchPageSize = config?.global?.["fetch-page-size"] || 1000;
   const maxRecords = config?.global?.["max-records"] || 50000;`;
 
@@ -63,13 +56,11 @@ const getAllRecordsPaged = `  const fetchAllPaged = async (extraFilter: any = {}
 
       const page = response.obj || [];
       rows.push(...page);
-      // A short page is the last one; without this the loop would keep asking
-      // past the end until it reached the ceiling.
+      // A short page marks the end.
       if (page.length < pageSize) break;
     }
 
-    // Stopping at the ceiling means the answer is partial. Say so, rather than
-    // handing back a truncated export that looks complete.
+    // Warn when the result is truncated.
     if (rows.length >= maxRecords) {
       toast(
         \`Stopped at \${maxRecords.toLocaleString()} records, which is as many as this page can hold. Narrow the filter to cover the rest.\`,
@@ -110,7 +101,7 @@ const replacements = [
 
 for (const [from, to] of replacements) {
   if (!source.includes(from)) {
-    // Fail loudly: a silent miss would ship the unbounded version again.
+    // Do not allow the unbounded implementation to ship silently.
     console.error("page-bulk-fetches: anchor not found, gruim may have moved on");
     console.error(from.split("\n")[0]);
     process.exit(1);

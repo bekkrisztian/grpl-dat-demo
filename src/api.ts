@@ -30,10 +30,7 @@ export type Criteria = {
   ut: string;
 };
 
-// Vehicle queries go through the Redis-backed cache layer. The SQL controllers
-// that feed the dropdowns cannot: the cache layer's generated client repeats
-// the where parameter on those paths, so the positional call drops sqlParams
-// and every lookup comes back empty. They address layer one directly.
+// Use layer one for SQL options because the cached client drops sqlParams.
 const cacheUrl = (process.env.SVELTE_APP_API_URL || "").replace(/\/$/, "");
 const treeUrl = (process.env.SVELTE_APP_TREE_API_URL || "").replace(/\/$/, "") || cacheUrl;
 
@@ -60,9 +57,7 @@ const compact = <T extends Option>(items: T[]) => items.filter(
 
 export const emptyCriteria = (): Criteria => ({ fza: "", hst: "", otg: "", ht: "", ut: "" });
 
-// Used when the generated controller is unavailable: a SQL controller whose
-// query carries no ${...} placeholder generates an undecorated parameter and
-// fails with 500, which is why this one filters on a wildcard.
+// Fallback for Grapi's parameterless SQL controller issue.
 const KNOWN_VEHICLE_TYPES: Option[] = [
   { value: "1", label: "Pkw, SUV, Kleintransporter" },
   { value: "2", label: "Transporter" },
@@ -141,8 +136,7 @@ const whereFromCriteria = (criteria: Criteria) => Object.fromEntries(
     .map(([key, value]) => [key, key === "otg" ? value : Number(value)]),
 );
 
-// A page the browser can render. Broad criteria match six figures of rows, so
-// the table asks for one page at a time and the count tells it how many exist.
+// Keep broad vehicle results paginated.
 export const PAGE_SIZE = 100;
 
 export const countVehicles = async (criteria: Criteria) => {
@@ -169,10 +163,7 @@ const byLabel = (left: Vehicle, right: Vehicle) =>
 
 export const fuzzySearchVehicles = async (text: string, criteria: Criteria, limit = 100) => {
   type FuzzyResult = Vehicle | { item: Vehicle; score?: number };
-  // Ask for a bounded page. Without a limit a broad word matches a large part
-  // of the table, and the API holds every row in memory to answer: its heap is
-  // capped at 2 GB and 100 rows already weigh 68 KB. The where clause has
-  // narrowed the set server-side, so this many is ample for the slice below.
+  // Bound fuzzy results to protect the API heap.
   const rows = await request<FuzzyResult[]>(
     `/dsearchtrees/datecode2s/fuzzy/${encodeURIComponent(text.trim())}`,
     { useGlobalSearch: true, filter: { where: whereFromCriteria(criteria), limit: limit * 5 } },

@@ -1,9 +1,7 @@
 #!/bin/sh
 set -eu
 
-# The generated global fuzzy implementation builds raw SQL and ignores the
-# supplied LoopBack filter. Use the repository instead so datasource mappings,
-# criteria and the result limit are all applied safely.
+# Replace unbounded raw fuzzy SQL with a filtered repository query.
 node <<'NODE'
 const fs = require('fs');
 
