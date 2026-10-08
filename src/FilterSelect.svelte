@@ -8,21 +8,30 @@
   export let disabled = false;
   export let loading = false;
   export let optional = false;
+
+  // An option whose label repeats its value reads better with the field name in
+  // front of it: the model range column in this data has no separate label.
+  const text = (option: Option) =>
+    option.label === option.value ? `${label} ${option.value}` : `${option.label} (${option.value})`;
 </script>
 
 <label class="block" for={id}>
-  <span class="mb-2 block text-sm font-semibold text-slate-700">{label}</span>
+  <span class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-app-muted">
+    {label}
+    {#if optional}<span class="font-medium normal-case tracking-normal text-app-muted/70">optional</span>{/if}
+  </span>
   <select
     {id}
     bind:value
     {disabled}
-    class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm shadow-sm outline-none transition focus:border-blue-600 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+    class="w-full rounded-xl border border-app-line bg-app-surface px-3.5 py-2.5 text-sm text-app-ink shadow-sm outline-none transition
+           hover:border-app-line-strong
+           focus-visible:border-app-accent focus-visible:ring-4 focus-visible:ring-app-accent/15
+           disabled:cursor-not-allowed disabled:border-app-line disabled:bg-app-sunken disabled:text-app-muted/60 disabled:shadow-none"
   >
     <option value="">{loading ? "Loading…" : optional ? `Any ${label}` : `Select ${label}`}</option>
     {#each options as option}
-      <option value={option.value}>
-        {option.label === option.value ? `${label} ${option.value}` : `${option.label} (${option.value})`}
-      </option>
+      <option value={option.value}>{text(option)}</option>
     {/each}
   </select>
 </label>

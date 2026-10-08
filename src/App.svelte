@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import FilterSelect from "./FilterSelect.svelte";
   import VehicleTable from "./VehicleTable.svelte";
+  import { adminModuleCss } from "./gruimTheme";
   import {
     emptyCriteria,
     countVehicles,
@@ -205,102 +206,139 @@
 
 <svelte:head><title>DAT vehicle search demo</title></svelte:head>
 
-<main class="min-h-screen bg-slate-50 text-slate-900">
-  <header class="border-b border-slate-200 bg-white">
-    <div class="mx-auto max-w-7xl px-6 py-7">
-      <p class="text-sm font-semibold uppercase tracking-widest text-blue-700">DAT demo</p>
-      <h1 class="mt-1 text-3xl font-bold">Vehicle search</h1>
-      <p class="mt-2 text-slate-600">Find DAT vehicles through the structured search tree or a fuzzy description.</p>
+<main class="min-h-screen bg-app-bg text-app-ink antialiased">
+  <header class="sticky top-0 z-20 border-b border-app-line bg-app-bg/85 backdrop-blur">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-4 px-6 py-4">
+      <div class="flex items-center gap-3">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-app-accent text-sm font-bold text-app-accent-ink">DAT</span>
+        <div class="leading-tight">
+          <h1 class="text-base font-semibold">Vehicle search</h1>
+          <p class="text-xs text-app-muted">Structured tree, fuzzy text and the raw table</p>
+        </div>
+      </div>
+
+      <nav class="ml-auto inline-flex rounded-xl border border-app-line bg-app-surface p-1 shadow-sm" aria-label="Search modes">
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'tree' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "tree"}>Search tree</button>
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'fuzzy' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "fuzzy"}>Fuzzy search</button>
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'browse' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={openBrowse}>Browse data</button>
+      </nav>
     </div>
   </header>
 
-  <div class="mx-auto max-w-7xl px-6 py-8">
-    <nav class="mb-8 flex gap-2" aria-label="Search modes">
-      <button class="rounded-lg px-4 py-2 text-sm font-semibold {view === 'tree' ? 'bg-blue-700 text-white' : 'bg-white text-slate-700 shadow-sm'}" on:click={() => view = "tree"}>Search tree</button>
-      <button class="rounded-lg px-4 py-2 text-sm font-semibold {view === 'fuzzy' ? 'bg-blue-700 text-white' : 'bg-white text-slate-700 shadow-sm'}" on:click={() => view = "fuzzy"}>Fuzzy search</button>
-      <button class="rounded-lg px-4 py-2 text-sm font-semibold {view === 'browse' ? 'bg-blue-700 text-white' : 'bg-white text-slate-700 shadow-sm'}" on:click={openBrowse}>Browse data</button>
-    </nav>
-
+  <div class="mx-auto max-w-7xl px-6 py-10">
     {#if startupError}
-      <div role="alert" class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">DAT API unavailable: {startupError}</div>
+      <div role="alert" class="mb-8 flex items-start gap-3 rounded-xl border border-app-danger/30 bg-app-danger-soft px-4 py-3 text-sm text-app-danger">
+        <span class="mt-0.5 font-semibold">DAT API unavailable</span>
+        <span class="text-app-danger/80">{startupError}</span>
+      </div>
     {/if}
 
     {#if view === "tree"}
       <section aria-labelledby="tree-title">
-        <div class="mb-6">
-          <h2 id="tree-title" class="text-2xl font-bold">Structured vehicle selection</h2>
-          <p class="mt-1 text-slate-600">Narrow from left to right. You can list the vehicles at any depth, from the vehicle type down to a single model.</p>
+        <div class="mb-7 max-w-2xl">
+          <h2 id="tree-title" class="text-3xl font-bold tracking-tight">Structured vehicle selection</h2>
+          <p class="mt-2 text-app-muted">Narrow from left to right. You can list the vehicles at any depth, from the vehicle type down to a single model.</p>
         </div>
-        <div class="grid gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-2 lg:grid-cols-5">
-          <div on:change={treeFzaChanged}><FilterSelect id="tree-fza" label="FZA" bind:value={treeCriteria.fza} options={vehicleTypes} loading={initialLoading} /></div>
-          <div on:change={treeHstChanged}><FilterSelect id="tree-hst" label="HST" bind:value={treeCriteria.hst} options={treeBrands} disabled={!treeCriteria.fza} loading={treeLoading === "hst"} /></div>
-          <div on:change={treeOtgChanged}><FilterSelect id="tree-otg" label="OTG" bind:value={treeCriteria.otg} options={treeRanges} disabled={!treeCriteria.hst} loading={treeLoading === "otg"} /></div>
-          <div on:change={treeHtChanged}><FilterSelect id="tree-ht" label="HT" bind:value={treeCriteria.ht} options={treeGroups} disabled={!treeCriteria.otg} loading={treeLoading === "ht"} /></div>
-          <FilterSelect id="tree-ut" label="UT" bind:value={treeCriteria.ut} options={treeModels} disabled={!treeCriteria.ht} loading={treeLoading === "ut"} />
-          <div class="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-5">
-            <button class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300" disabled={!treeCriteria.fza || treeLoading === "results"} on:click={runTreeSearch}>
+
+        <div class="rounded-2xl border border-app-line bg-app-surface p-6 shadow-sm">
+          <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
+            <div class="lg:col-span-2" on:change={treeFzaChanged}><FilterSelect id="tree-fza" label="FZA" bind:value={treeCriteria.fza} options={vehicleTypes} loading={initialLoading} /></div>
+            <div on:change={treeHstChanged}><FilterSelect id="tree-hst" label="HST" bind:value={treeCriteria.hst} options={treeBrands} disabled={!treeCriteria.fza} loading={treeLoading === "hst"} /></div>
+            <div on:change={treeOtgChanged}><FilterSelect id="tree-otg" label="OTG" bind:value={treeCriteria.otg} options={treeRanges} disabled={!treeCriteria.hst} loading={treeLoading === "otg"} /></div>
+            <div on:change={treeHtChanged}><FilterSelect id="tree-ht" label="HT" bind:value={treeCriteria.ht} options={treeGroups} disabled={!treeCriteria.otg} loading={treeLoading === "ht"} /></div>
+            <FilterSelect id="tree-ut" label="UT" bind:value={treeCriteria.ut} options={treeModels} disabled={!treeCriteria.ht} loading={treeLoading === "ut"} />
+          </div>
+
+          <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-app-line pt-5">
+            <button
+              class="rounded-xl bg-app-accent px-5 py-2.5 text-sm font-semibold text-app-accent-ink shadow-sm transition hover:bg-app-accent-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-accent/25 disabled:cursor-not-allowed disabled:bg-app-line-strong disabled:text-app-muted disabled:shadow-none"
+              disabled={!treeCriteria.fza || treeLoading === "results"} on:click={runTreeSearch}>
               {treeLoading === "results" ? "Loading vehicles…" : "Show vehicles"}
             </button>
             {#if treeCriteria.fza}
-              <button class="rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-900" on:click={clearTree}>Clear</button>
+              <button class="rounded-xl px-3 py-2 text-sm font-medium text-app-muted transition hover:text-app-ink" on:click={clearTree}>Clear</button>
             {/if}
           </div>
         </div>
-        {#if treeError}<p role="alert" class="mt-4 text-sm text-red-700">{treeError}</p>{/if}
+
+        {#if treeError}<p role="alert" class="mt-4 text-sm text-app-danger">{treeError}</p>{/if}
+
         <div class="mt-8">
-          {#if treeSearched && !treeLoading && !treeResults.length && !treeError}<p class="rounded-lg bg-white p-6 text-center text-slate-500">No matching vehicles.</p>{/if}
+          {#if treeSearched && !treeLoading && !treeResults.length && !treeError}
+            <p class="rounded-2xl border border-dashed border-app-line bg-app-surface/60 p-10 text-center text-app-muted">No vehicles match these criteria.</p>
+          {/if}
           <VehicleTable vehicles={treeResults} total={treeTotal} offset={(treePage - 1) * PAGE_SIZE} />
           {#if treePages > 1}
             <nav class="mt-4 flex items-center justify-between gap-4" aria-label="Result pages">
-              <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300" disabled={treePage === 1 || !!treeLoading} on:click={() => goToTreePage(treePage - 1)}>Previous</button>
-              <span class="text-sm text-slate-600">Page <span class="font-semibold text-slate-900">{treePage.toLocaleString("en-US")}</span> of {treePages.toLocaleString("en-US")}</span>
-              <button class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-300" disabled={treePage === treePages || !!treeLoading} on:click={() => goToTreePage(treePage + 1)}>Next</button>
+              <button class="rounded-xl border border-app-line bg-app-surface px-4 py-2 text-sm font-semibold text-app-ink shadow-sm transition hover:border-app-line-strong disabled:cursor-not-allowed disabled:text-app-muted/50 disabled:shadow-none" disabled={treePage === 1 || !!treeLoading} on:click={() => goToTreePage(treePage - 1)}>Previous</button>
+              <span class="text-sm text-app-muted">Page <span class="font-semibold text-app-ink">{treePage.toLocaleString("en-US")}</span> of {treePages.toLocaleString("en-US")}</span>
+              <button class="rounded-xl border border-app-line bg-app-surface px-4 py-2 text-sm font-semibold text-app-ink shadow-sm transition hover:border-app-line-strong disabled:cursor-not-allowed disabled:text-app-muted/50 disabled:shadow-none" disabled={treePage === treePages || !!treeLoading} on:click={() => goToTreePage(treePage + 1)}>Next</button>
             </nav>
           {/if}
         </div>
       </section>
+
     {:else if view === "fuzzy"}
       <section aria-labelledby="fuzzy-title">
-        <div class="mb-6">
-          <h2 id="fuzzy-title" class="text-2xl font-bold">Fuzzy vehicle search</h2>
-          <p class="mt-1 text-slate-600">Enter any vehicle text and optionally narrow it with DAT criteria.</p>
+        <div class="mb-7 max-w-2xl">
+          <h2 id="fuzzy-title" class="text-3xl font-bold tracking-tight">Fuzzy vehicle search</h2>
+          <p class="mt-2 text-app-muted">Describe the vehicle in your own words. Narrow it with any of the DAT criteria, in any combination.</p>
         </div>
-        <form class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm" on:submit|preventDefault={runFuzzySearch}>
+
+        <form class="rounded-2xl border border-app-line bg-app-surface p-6 shadow-sm" on:submit|preventDefault={runFuzzySearch}>
           <label class="block" for="fuzzy-text">
-            <span class="mb-2 block text-sm font-semibold text-slate-700">Fuzzy text</span>
-            <input id="fuzzy-text" bind:value={fuzzyText} placeholder="e.g. BMW diesel automatic" class="w-full rounded-lg border border-slate-300 px-4 py-3 shadow-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" />
+            <span class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-app-muted">Fuzzy text</span>
+            <input id="fuzzy-text" bind:value={fuzzyText} placeholder="e.g. BMW diesel automatic"
+              class="w-full rounded-xl border border-app-line bg-app-surface px-4 py-3 text-base text-app-ink shadow-sm outline-none transition placeholder:text-app-muted/60 hover:border-app-line-strong focus-visible:border-app-accent focus-visible:ring-4 focus-visible:ring-app-accent/15" />
           </label>
-          <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <FilterSelect id="fuzzy-fza" label="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional />
+
+          <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
+            <div class="lg:col-span-2"><FilterSelect id="fuzzy-fza" label="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional /></div>
             <FilterSelect id="fuzzy-hst" label="HST" bind:value={fuzzyCriteria.hst} options={fuzzyBrands} loading={initialLoading} optional />
             <FilterSelect id="fuzzy-otg" label="OTG" bind:value={fuzzyCriteria.otg} options={fuzzyRanges} loading={initialLoading} optional />
             <FilterSelect id="fuzzy-ht" label="HT" bind:value={fuzzyCriteria.ht} options={fuzzyGroups} loading={initialLoading} optional />
             <FilterSelect id="fuzzy-ut" label="UT" bind:value={fuzzyCriteria.ut} options={fuzzyModels} loading={initialLoading} optional />
           </div>
-          <button type="submit" class="mt-5 rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300" disabled={!fuzzyText.trim() || fuzzyLoading === "results"}>
-            {fuzzyLoading === "results" ? "Searching…" : "Find vehicles"}
-          </button>
+
+          <div class="mt-6 border-t border-app-line pt-5">
+            <button type="submit"
+              class="rounded-xl bg-app-accent px-5 py-2.5 text-sm font-semibold text-app-accent-ink shadow-sm transition hover:bg-app-accent-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-accent/25 disabled:cursor-not-allowed disabled:bg-app-line-strong disabled:text-app-muted disabled:shadow-none"
+              disabled={!fuzzyText.trim() || fuzzyLoading === "results"}>
+              {fuzzyLoading === "results" ? "Searching…" : "Find vehicles"}
+            </button>
+          </div>
         </form>
-        {#if fuzzyError}<p role="alert" class="mt-4 text-sm text-red-700">{fuzzyError}</p>{/if}
+
+        {#if fuzzyError}<p role="alert" class="mt-4 text-sm text-app-danger">{fuzzyError}</p>{/if}
+
         <div class="mt-8">
-          {#if fuzzySearched && !fuzzyLoading && !fuzzyResults.length && !fuzzyError}<p class="rounded-lg bg-white p-6 text-center text-slate-500">No matching vehicles.</p>{/if}
+          {#if fuzzySearched && !fuzzyLoading && !fuzzyResults.length && !fuzzyError}
+            <p class="rounded-2xl border border-dashed border-app-line bg-app-surface/60 p-10 text-center text-app-muted">No vehicles match that description.</p>
+          {/if}
           <VehicleTable vehicles={fuzzyResults} />
         </div>
       </section>
+
     {:else}
       <section aria-labelledby="browse-title">
-        <div class="mb-6">
-          <h2 id="browse-title" class="text-2xl font-bold">All DAT vehicles</h2>
-          <p class="mt-1 text-slate-600">The full datecode2 table through the generated Grapple admin module, with filtering and paging.</p>
+        <div class="mb-7 max-w-2xl">
+          <h2 id="browse-title" class="text-3xl font-bold tracking-tight">All DAT vehicles</h2>
+          <p class="mt-2 text-app-muted">The full datecode2 table through the generated Grapple admin module, with filtering and paging.</p>
         </div>
         {#if browseLoading}
-          <p class="rounded-lg bg-white p-6 text-center text-slate-500">Loading the generated module…</p>
+          <p class="rounded-2xl border border-dashed border-app-line bg-app-surface/60 p-10 text-center text-app-muted">Loading the generated module…</p>
         {:else if browseError}
-          <p role="alert" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <p role="alert" class="rounded-2xl border border-app-danger/30 bg-app-danger-soft px-4 py-3 text-sm text-app-danger">
             The generated module could not be loaded: {browseError}. It is served by gruim, so this tab only works in a Grapple deployment.
           </p>
         {:else if BrowseAdmin}
-          <svelte:component this={BrowseAdmin} schema={browseSchema} translations={browseTranslations} enableFilter={true} enableClearFilter={true} enableLoadMore={true} />
+          <svelte:component this={BrowseAdmin} css={adminModuleCss} schema={browseSchema} translations={browseTranslations} enableFilter={true} enableClearFilter={true} enableLoadMore={true} />
         {/if}
       </section>
     {/if}
