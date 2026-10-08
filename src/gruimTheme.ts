@@ -84,8 +84,15 @@ button[class*="bg-primary"] {
   color: rgb(var(--dat-ink)) !important;
 }
 
+/* Hover states across the module reach for a light grey, which on this surface
+   is a flash of white. The row actions trigger is the visible one, but they all
+   belong to the same family. */
+#admin-list-table [class*="hover:bg-slate-300"]:hover,
+#admin-list-table [class*="hover:bg-slate-50"]:hover,
+#admin-list-table [class*="hover:bg-gray-100"]:hover,
+#admin-list-table [class*="hover:bg-gray-50"]:hover,
 #admin-list-table div[class*="bg-white"] button:hover,
-#admin-list-table div[class*="bg-white"] button[class*="hover:bg-slate-300"]:hover {
+nav[aria-label="Pagination"] [class*="hover:bg-gray-50"]:hover {
   background: rgb(var(--dat-accent-soft)) !important;
 }
 

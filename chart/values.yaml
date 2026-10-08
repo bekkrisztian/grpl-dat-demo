@@ -77,16 +77,31 @@ grases:
                 value: "dat-demo-db-mysql"
               - name: port
                 value: "3306"
+              - name: username
+                valueFrom:
+                  secretKeyRef:
+                    name: dat-demo-db-mysql-account-root
+                    key: username
+              - name: password
+                valueFrom:
+                  secretKeyRef:
+                    name: dat-demo-db-mysql-account-root
+                    key: password
             command:
               - sh
               - -c
               - |
+                set -e
                 until mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -e "select 1" >/dev/null 2>&1; do
                   echo "waiting for mysql"
                   sleep 2
                 done
                 mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -e "CREATE DATABASE IF NOT EXISTS dsearchtree;"
-                loaded=$(mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -N -B -e "select count(*) from dsearchtree.datecode2" 2>/dev/null || echo 0)
+                if mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -N -B -e "select count(*) from dsearchtree.datecode2" > /tmp/datecode2-count 2>/dev/null; then
+                  read -r loaded < /tmp/datecode2-count
+                else
+                  loaded=0
+                fi
                 if [ "$loaded" = "0" ]; then
                   echo "seeding dsearchtree.datecode2"
                   gzip -dc /seed/datecode2.sql.gz | mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" dsearchtree
@@ -94,7 +109,8 @@ grases:
                 ensure_index() {
                   index_name="$1"
                   columns="$2"
-                  exists=$(mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -N -B -e "select count(*) from information_schema.statistics where table_schema='dsearchtree' and table_name='datecode2' and index_name='${index_name}'")
+                  mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -N -B -e "select count(*) from information_schema.statistics where table_schema='dsearchtree' and table_name='datecode2' and index_name='${index_name}'" > /tmp/index-count
+                  read -r exists < /tmp/index-count
                   if [ "$exists" = "0" ]; then
                     mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -e "create index ${index_name} on dsearchtree.datecode2 (${columns})"
                   fi
