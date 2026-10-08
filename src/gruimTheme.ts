@@ -71,6 +71,33 @@ button[class*="bg-primary"] {
   border-color: transparent !important;
 }
 
+/* The row actions menu is a bg-white panel whose items carry no colour class,
+   so they inherit the near-white text this theme sets on the container and
+   vanish against their own background. */
+#admin-list-table div[class*="bg-white"] {
+  background: rgb(var(--dat-surface)) !important;
+  border: 1px solid rgb(var(--dat-line)) !important;
+}
+
+#admin-list-table div[class*="bg-white"] button,
+#admin-list-table div[class*="bg-white"] span {
+  color: rgb(var(--dat-ink)) !important;
+}
+
+#admin-list-table div[class*="bg-white"] button:hover,
+#admin-list-table div[class*="bg-white"] button[class*="hover:bg-slate-300"]:hover {
+  background: rgb(var(--dat-accent-soft)) !important;
+}
+
+/* Labels and icons inside a filled button hold their own colour -- the icon is
+   literally text-white -- so the rule on the button never reaches them. */
+button[class*="bg-primary"] span,
+button[class*="bg-primary"] svg,
+button[class*="bg-primary"] path {
+  color: rgb(var(--dat-accent-ink)) !important;
+  stroke: currentColor;
+}
+
 /* The pager's white band is a wrapper around the nav, not the nav itself. */
 div:has(> div > div > nav[aria-label="Pagination"]),
 div:has(> div > nav[aria-label="Pagination"]),

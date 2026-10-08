@@ -37,7 +37,7 @@ export type Criteria = {
 const cacheUrl = (process.env.SVELTE_APP_API_URL || "").replace(/\/$/, "");
 const treeUrl = (process.env.SVELTE_APP_TREE_API_URL || "").replace(/\/$/, "") || cacheUrl;
 
-const request = async <T>(path: string, query: Record<string, unknown> = {}, base = cacheUrl): Promise<T> => {
+const request = async <T>(path: string, query: Record<string, unknown> = {}, base = cacheUrl, signal?: AbortSignal): Promise<T> => {
   if (!base) throw new Error("SVELTE_APP_API_URL is not configured.");
   const url = new URL(`${base}${path}`);
   Object.entries(query).forEach(([key, value]) => {
@@ -46,7 +46,7 @@ const request = async <T>(path: string, query: Record<string, unknown> = {}, bas
     }
   });
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal });
   if (!response.ok) {
     const body = await response.json().catch(() => null);
     throw new Error(body?.error?.message || `${response.status} ${response.statusText}`);
@@ -86,8 +86,9 @@ const sqlOptions = async (
   sqlParams: Record<string, string>,
   valueKey: string,
   labelKey: string,
+  signal?: AbortSignal,
 ): Promise<Option[]> => {
-  const rows = await request<Record<string, unknown>[]>(path, { where: {}, sqlParams }, treeUrl);
+  const rows = await request<Record<string, unknown>[]>(path, { where: {}, sqlParams }, treeUrl, signal);
   return compact(rows.map((row) => ({
     value: String(row[valueKey] ?? ""),
     label: String(row[labelKey] ?? row[valueKey] ?? ""),
@@ -96,13 +97,22 @@ const sqlOptions = async (
 
 export const loadBrands = (fza: string) => sqlOptions("/brandsByVehicleType", { FZA: fza }, "HST", "HSTB");
 
-export const loadAllBrands = () => sqlOptions("/brands", { HST: "%" }, "HST", "HSTB");
+const searchParams = (query: string) => ({
+  nameQuery: `${query}%`,
+  codeQuery: /^\d+$/.test(query) ? query : "-1",
+});
 
-export const loadAllModelRanges = () => sqlOptions("/modelRanges", { OTG: "%" }, "OTG", "OTGB");
+export const searchBrands = (query: string, signal?: AbortSignal) =>
+  sqlOptions("/brands", searchParams(query), "HST", "HSTB", signal);
 
-export const loadAllModelGroups = () => sqlOptions("/modelGroups", { HT: "%" }, "HT", "HTB");
+export const searchModelRanges = (query: string, signal?: AbortSignal) =>
+  sqlOptions("/modelRanges", { nameQuery: `${query}%`, codeQuery: `${query}%` }, "OTG", "OTGB", signal);
 
-export const loadAllModels = () => sqlOptions("/models", { UT: "%" }, "UT", "UTB");
+export const searchModelGroups = (query: string, signal?: AbortSignal) =>
+  sqlOptions("/modelGroups", searchParams(query), "HT", "HTB", signal);
+
+export const searchModels = (query: string, signal?: AbortSignal) =>
+  sqlOptions("/models", searchParams(query), "UT", "UTB", signal);
 
 export const loadModelRanges = (fza: string, hst: string) => sqlOptions(
   "/modelRangeByVehicleTypeAndManufacturer",
@@ -159,9 +169,13 @@ const byLabel = (left: Vehicle, right: Vehicle) =>
 
 export const fuzzySearchVehicles = async (text: string, criteria: Criteria, limit = 100) => {
   type FuzzyResult = Vehicle | { item: Vehicle; score?: number };
+  // Ask for a bounded page. Without a limit a broad word matches a large part
+  // of the table, and the API holds every row in memory to answer: its heap is
+  // capped at 2 GB and 100 rows already weigh 68 KB. The where clause has
+  // narrowed the set server-side, so this many is ample for the slice below.
   const rows = await request<FuzzyResult[]>(
-    `/dsearchtree/datecode2s/fuzzy/${encodeURIComponent(text.trim())}`,
-    { useGlobalSearch: true, filter: { where: whereFromCriteria(criteria) } },
+    `/dsearchtrees/datecode2s/fuzzy/${encodeURIComponent(text.trim())}`,
+    { useGlobalSearch: true, filter: { where: whereFromCriteria(criteria), limit: limit * 5 } },
   );
   const selected = whereFromCriteria(criteria);
   return rows

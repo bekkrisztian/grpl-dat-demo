@@ -51,7 +51,9 @@ grases:
         - name: dsearchtree
           spec:
             datasource: dsearchtree
-      fuzzysearch: []
+      fuzzysearch:
+        - name: datecode2
+          content: 'dsearchtree:{"fuzzy":true,"centralFuzzy":false,"datasource":"dsearchtree","databaseName":"dsearchtree","appName":"Grpl","include":"datecode2","subPath":""}'
       models: []
       repositories: []
       relations: []
@@ -89,6 +91,22 @@ grases:
                   echo "seeding dsearchtree.datecode2"
                   gzip -dc /seed/datecode2.sql.gz | mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" dsearchtree
                 fi
+                ensure_index() {
+                  index_name="$1"
+                  columns="$2"
+                  exists=$(mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -N -B -e "select count(*) from information_schema.statistics where table_schema='dsearchtree' and table_name='datecode2' and index_name='${index_name}'")
+                  if [ "$exists" = "0" ]; then
+                    mysql -h "$(host)" -P "$(port)" -u "$(username)" -p"$(password)" -e "create index ${index_name} on dsearchtree.datecode2 (${columns})"
+                  fi
+                }
+                ensure_index idx_datecode2_hstb 'HSTB, HST'
+                ensure_index idx_datecode2_hst 'HST'
+                ensure_index idx_datecode2_otgb 'OTGB, OTG'
+                ensure_index idx_datecode2_otg 'OTG'
+                ensure_index idx_datecode2_htb 'HTB, HT'
+                ensure_index idx_datecode2_ht 'HT'
+                ensure_index idx_datecode2_utb 'UTB, UT'
+                ensure_index idx_datecode2_ut 'UT'
         - name: init-modules
           spec:
             name: init-modules
@@ -114,7 +132,7 @@ grases:
       autoscaling:
         maxReplicas: 3
       style: '{"colors":{"primary":"#1451cb"}}'
-      config: ""
+      config: '{"global":{"fetch-page-size":1000,"max-records":50000}}'
       additionalpackages: ""
       custommodules: []
       prepatches: []

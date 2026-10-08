@@ -243,7 +243,9 @@ tasks:
             continue
           fi
           echo "Resetting grapi injections for ${GRAS_NAME} (${GRAPI_FOLDER})..."
-          GROUPS="injections controllers prerelationpatches postpatches prediscoverypatches prepatches fuzzysearch models openapis repositories restcruds serviceproviders services cacheconfigs datasources relations"
+          # Fuzzy search is declarative chart configuration, not a temporary
+          # base64 injection. Keep it across DevSpace resets.
+          GROUPS="injections controllers prerelationpatches postpatches prediscoverypatches prepatches models openapis repositories restcruds serviceproviders services cacheconfigs datasources relations"
           for group_name in ${GROUPS}; do
             if yq -e ".grases.${GRAS_NAME}.grapi.${group_name}[]" "{{.VALUES_YAML_PATH}}" >/dev/null 2>&1; then
               has_content=$(yq eval ".grases.${GRAS_NAME}.grapi.${group_name}[] | select(has(\"content\")) | .content" "{{.VALUES_YAML_PATH}}" 2>/dev/null | head -n 1)
@@ -283,7 +285,7 @@ tasks:
             continue
           fi
           echo "Resetting gruim injections for ${GRAS_NAME} (${GRUIM_FOLDER})..."
-          GROUPS="custommodules"
+          GROUPS="custommodules prepatches postpatches"
           for group_name in ${GROUPS}; do
             if yq -e ".grases.${GRAS_NAME}.gruim.${group_name}[]" "{{.VALUES_YAML_PATH}}" >/dev/null 2>&1; then
               has_content=$(yq eval ".grases.${GRAS_NAME}.gruim.${group_name}[] | select(has(\"content\")) | .content" "{{.VALUES_YAML_PATH}}" 2>/dev/null | head -n 1)
@@ -415,26 +417,48 @@ tasks:
           fi
           if [ -z "${FINDFILES}" ]; then
             echo "No gruim injection files found in ${GRUIM_FOLDER}/${cm}, skipping patching."
-            continue
+          else
+            # Clear existing custommodules for this gras
+            yq -i "del(.grases.${GRAS_NAME}.gruim.${cm}[])" "{{.VALUES_YAML_PATH}}"
+            # Patch values.yaml for each file
+            for file_path in ${FINDFILES}; do
+              rel_path=$(echo "${file_path}" | sed "s,${GRUIM_FOLDER}/,,g")
+              group_name=$(echo "${rel_path}" | cut -d/ -f1)
+              file_name=$(echo "${rel_path}" | cut -d/ -f2)
+              file_extension=$(echo ${file_name##*.})
+              injection_name=$(echo ${file_name} | sed "s,.${file_extension}$,,g")
+              base64_content_file=./tmpfile_${GRAS_NAME}_${injection_name}
+              cat ${file_path} | tr -d '\r' | ${BASE64} > ${base64_content_file}
+              ${SED} "1s/^/content=/" ${base64_content_file}
+              ${SED} "1s/^/name=${injection_name}\n/" ${base64_content_file}
+              if [ "${file_name}" = "index.ts" ]; then continue; fi
+              echo "patching: ${GRAS_NAME}/gruim - ${cm} - ${injection_name} - ${file_name}"
+              yq -i ".grases.${GRAS_NAME}.gruim.${cm} += [load_props(\"${base64_content_file}\")]" "{{.VALUES_YAML_PATH}}"
+              rm ${base64_content_file} 2>/dev/null || true
+            done
           fi
-          # Clear existing custommodules for this gras
-          yq -i "del(.grases.${GRAS_NAME}.gruim.${cm}[])" "{{.VALUES_YAML_PATH}}"
-          # Patch values.yaml for each file
-          for file_path in ${FINDFILES}; do
-            rel_path=$(echo "${file_path}" | sed "s,${GRUIM_FOLDER}/,,g")
-            group_name=$(echo "${rel_path}" | cut -d/ -f1)
-            file_name=$(echo "${rel_path}" | cut -d/ -f2)
-            file_extension=$(echo ${file_name##*.})
-            injection_name=$(echo ${file_name} | sed "s,.${file_extension}$,,g")
-            base64_content=$(cat ${file_path} | tr -d '\r' | ${BASE64})
-            base64_content_file=./tmpfile_${GRAS_NAME}_${injection_name}
-            cat ${file_path} | tr -d '\r' | ${BASE64} > ${base64_content_file}
-            ${SED} "1s/^/content=/" ${base64_content_file}
-            ${SED} "1s/^/name=${injection_name}\n/" ${base64_content_file}
-            if [ "${file_name}" = "index.ts" ]; then continue; fi
-            echo "patching: ${GRAS_NAME}/gruim - ${cm} - ${injection_name} - ${file_name}"
-            yq -i ".grases.${GRAS_NAME}.gruim.${cm} += [load_props(\"${base64_content_file}\")]" "{{.VALUES_YAML_PATH}}"
-            rm ${base64_content_file} 2>/dev/null || true
+
+          # Gruim shell patches are injected separately from custom modules.
+          # Without this step files under gruim/prepatches and postpatches only
+          # exist locally and are never executed by the generated Gruim pod.
+          for patch_folder in prepatches postpatches; do
+            PATCHFILES=$(find "${GRUIM_FOLDER}/${patch_folder}" -type f -name '*.sh' 2>/dev/null | sort || true)
+            if [ -z "${PATCHFILES}" ]; then
+              continue
+            fi
+
+            yq -i ".grases.${GRAS_NAME}.gruim.${patch_folder} = []" "{{.VALUES_YAML_PATH}}"
+            for file_path in ${PATCHFILES}; do
+              file_name=$(basename "${file_path}")
+              injection_name="${file_name%.*}"
+              base64_content_file=./tmpfile_${GRAS_NAME}_${patch_folder}_${injection_name}
+              cat "${file_path}" | tr -d '\r' | ${BASE64} > "${base64_content_file}"
+              ${SED} "1s/^/content=/" "${base64_content_file}"
+              ${SED} "1s/^/name=${injection_name}\n/" "${base64_content_file}"
+              echo "patching: ${GRAS_NAME}/gruim - ${patch_folder} - ${injection_name} - ${file_name}"
+              yq -i ".grases.${GRAS_NAME}.gruim.${patch_folder} += [load_props(\"${base64_content_file}\")]" "{{.VALUES_YAML_PATH}}"
+              rm "${base64_content_file}" 2>/dev/null || true
+            done
           done
         done
         # set +o noglob

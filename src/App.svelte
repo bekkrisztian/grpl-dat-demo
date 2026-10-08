@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import FilterSelect from "./FilterSelect.svelte";
+  import SearchableFilter from "./SearchableFilter.svelte";
   import VehicleTable from "./VehicleTable.svelte";
   import { adminModuleCss } from "./gruimTheme";
   import {
@@ -9,10 +10,10 @@
     findVehicles,
     fuzzySearchVehicles,
     PAGE_SIZE,
-    loadAllBrands,
-    loadAllModelGroups,
-    loadAllModelRanges,
-    loadAllModels,
+    searchBrands,
+    searchModelGroups,
+    searchModelRanges,
+    searchModels,
     loadBrands,
     loadModelGroups,
     loadModelRanges,
@@ -94,10 +95,6 @@
   let treeError = "";
 
   let fuzzyCriteria = emptyCriteria();
-  let fuzzyBrands: Option[] = [];
-  let fuzzyRanges: Option[] = [];
-  let fuzzyGroups: Option[] = [];
-  let fuzzyModels: Option[] = [];
   let fuzzyText = "";
   let fuzzyLoading = "";
   let fuzzyResults: Vehicle[] = [];
@@ -106,13 +103,7 @@
 
   onMount(async () => {
     try {
-      [vehicleTypes, fuzzyBrands, fuzzyRanges, fuzzyGroups, fuzzyModels] = await Promise.all([
-        loadVehicleTypes(),
-        loadAllBrands(),
-        loadAllModelRanges(),
-        loadAllModelGroups(),
-        loadAllModels(),
-      ]);
+      vehicleTypes = await loadVehicleTypes();
     } catch (error) {
       startupError = message(error);
     } finally {
@@ -122,14 +113,18 @@
 
   const message = (error: unknown) => error instanceof Error ? error.message : "The DAT API request failed.";
 
+  // Returns the object so the caller can reassign it: mutating a property does
+  // not reach the bound child, which would then hold a value its options no
+  // longer offer and render the select blank.
   const resetAfter = (criteria: Criteria, field: keyof Criteria) => {
     const order: (keyof Criteria)[] = ["fza", "hst", "otg", "ht", "ut"];
     order.slice(order.indexOf(field) + 1).forEach((key) => criteria[key] = "");
+    return { ...criteria };
   };
 
   const treeFzaChanged = async () => {
-    resetAfter(treeCriteria, "fza");
-    treeBrands = []; treeRanges = []; treeGroups = []; treeModels = []; treeResults = []; treeSearched = false;
+    treeCriteria = resetAfter(treeCriteria, "fza");
+    treeBrands = []; treeRanges = []; treeGroups = []; treeModels = []; clearTreeResults();
     if (!treeCriteria.fza) return;
     treeLoading = "hst"; treeError = "";
     try { treeBrands = await loadBrands(treeCriteria.fza); } catch (error) { treeError = message(error); }
@@ -137,8 +132,8 @@
   };
 
   const treeHstChanged = async () => {
-    resetAfter(treeCriteria, "hst");
-    treeRanges = []; treeGroups = []; treeModels = []; treeResults = []; treeSearched = false;
+    treeCriteria = resetAfter(treeCriteria, "hst");
+    treeRanges = []; treeGroups = []; treeModels = []; clearTreeResults();
     if (!treeCriteria.hst) return;
     treeLoading = "otg"; treeError = "";
     try { treeRanges = await loadModelRanges(treeCriteria.fza, treeCriteria.hst); } catch (error) { treeError = message(error); }
@@ -146,8 +141,8 @@
   };
 
   const treeOtgChanged = async () => {
-    resetAfter(treeCriteria, "otg");
-    treeGroups = []; treeModels = []; treeResults = []; treeSearched = false;
+    treeCriteria = resetAfter(treeCriteria, "otg");
+    treeGroups = []; treeModels = []; clearTreeResults();
     if (!treeCriteria.otg) return;
     treeLoading = "ht"; treeError = "";
     try { treeGroups = await loadModelGroups(treeCriteria.fza, treeCriteria.hst, treeCriteria.otg); } catch (error) { treeError = message(error); }
@@ -155,18 +150,24 @@
   };
 
   const treeHtChanged = async () => {
-    resetAfter(treeCriteria, "ht");
-    treeModels = []; treeResults = []; treeSearched = false;
+    treeCriteria = resetAfter(treeCriteria, "ht");
+    treeModels = []; clearTreeResults();
     if (!treeCriteria.ht) return;
     treeLoading = "ut"; treeError = "";
     try { treeModels = await loadModels(treeCriteria.fza, treeCriteria.hst, treeCriteria.ht); } catch (error) { treeError = message(error); }
     finally { treeLoading = ""; }
   };
 
+  // The four cascade handlers each cleared the rows but left the count and the
+  // page behind, so the pager kept offering pages for a search that was gone.
+  const clearTreeResults = () => {
+    treeResults = []; treeTotal = 0; treePage = 1; treeSearched = false;
+  };
+
   const clearTree = () => {
     treeCriteria = emptyCriteria();
     treeBrands = []; treeRanges = []; treeGroups = []; treeModels = [];
-    treeResults = []; treeTotal = 0; treePage = 1; treeSearched = false; treeError = "";
+    clearTreeResults(); treeError = "";
   };
 
   const runTreeSearch = async () => {
@@ -202,6 +203,7 @@
     try { fuzzyResults = await fuzzySearchVehicles(fuzzyText, fuzzyCriteria); } catch (error) { fuzzyError = message(error); fuzzyResults = []; }
     finally { fuzzyLoading = ""; }
   };
+
 </script>
 
 <svelte:head><title>DAT vehicle search demo</title></svelte:head>
@@ -257,7 +259,7 @@
 
           <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-app-line pt-5">
             <button
-              class="rounded-xl bg-app-accent px-5 py-2.5 text-sm font-semibold text-app-accent-ink shadow-sm transition hover:bg-app-accent-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-accent/25 disabled:cursor-not-allowed disabled:bg-app-line-strong disabled:text-app-muted disabled:shadow-none"
+              class="rounded-xl bg-app-accent px-5 py-2.5 text-sm font-semibold text-app-accent-ink shadow-sm transition hover:bg-app-accent-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-accent/25 disabled:cursor-not-allowed disabled:border disabled:border-app-line disabled:bg-app-sunken disabled:text-app-muted disabled:shadow-none"
               disabled={!treeCriteria.fza || treeLoading === "results"} on:click={runTreeSearch}>
               {treeLoading === "results" ? "Loading vehicles…" : "Show vehicles"}
             </button>
@@ -274,7 +276,7 @@
             <p class="rounded-2xl border border-dashed border-app-line bg-app-surface/60 p-10 text-center text-app-muted">No vehicles match these criteria.</p>
           {/if}
           <VehicleTable vehicles={treeResults} total={treeTotal} offset={(treePage - 1) * PAGE_SIZE} />
-          {#if treePages > 1}
+          {#if treeResults.length && treePages > 1}
             <nav class="mt-4 flex items-center justify-between gap-4" aria-label="Result pages">
               <button class="rounded-xl border border-app-line bg-app-surface px-4 py-2 text-sm font-semibold text-app-ink shadow-sm transition hover:border-app-line-strong disabled:cursor-not-allowed disabled:text-app-muted/50 disabled:shadow-none" disabled={treePage === 1 || !!treeLoading} on:click={() => goToTreePage(treePage - 1)}>Previous</button>
               <span class="text-sm text-app-muted">Page <span class="font-semibold text-app-ink">{treePage.toLocaleString("en-US")}</span> of {treePages.toLocaleString("en-US")}</span>
@@ -300,15 +302,15 @@
 
           <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
             <div class="lg:col-span-2"><FilterSelect id="fuzzy-fza" label="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional /></div>
-            <FilterSelect id="fuzzy-hst" label="HST" bind:value={fuzzyCriteria.hst} options={fuzzyBrands} loading={initialLoading} optional />
-            <FilterSelect id="fuzzy-otg" label="OTG" bind:value={fuzzyCriteria.otg} options={fuzzyRanges} loading={initialLoading} optional />
-            <FilterSelect id="fuzzy-ht" label="HT" bind:value={fuzzyCriteria.ht} options={fuzzyGroups} loading={initialLoading} optional />
-            <FilterSelect id="fuzzy-ut" label="UT" bind:value={fuzzyCriteria.ut} options={fuzzyModels} loading={initialLoading} optional />
+            <SearchableFilter id="fuzzy-hst" label="HST" bind:value={fuzzyCriteria.hst} loadOptions={searchBrands} />
+            <SearchableFilter id="fuzzy-otg" label="OTG" bind:value={fuzzyCriteria.otg} loadOptions={searchModelRanges} />
+            <SearchableFilter id="fuzzy-ht" label="HT" bind:value={fuzzyCriteria.ht} loadOptions={searchModelGroups} />
+            <SearchableFilter id="fuzzy-ut" label="UT" bind:value={fuzzyCriteria.ut} loadOptions={searchModels} />
           </div>
 
           <div class="mt-6 border-t border-app-line pt-5">
             <button type="submit"
-              class="rounded-xl bg-app-accent px-5 py-2.5 text-sm font-semibold text-app-accent-ink shadow-sm transition hover:bg-app-accent-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-accent/25 disabled:cursor-not-allowed disabled:bg-app-line-strong disabled:text-app-muted disabled:shadow-none"
+              class="rounded-xl bg-app-accent px-5 py-2.5 text-sm font-semibold text-app-accent-ink shadow-sm transition hover:bg-app-accent-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-accent/25 disabled:cursor-not-allowed disabled:border disabled:border-app-line disabled:bg-app-sunken disabled:text-app-muted disabled:shadow-none"
               disabled={!fuzzyText.trim() || fuzzyLoading === "results"}>
               {fuzzyLoading === "results" ? "Searching…" : "Find vehicles"}
             </button>
