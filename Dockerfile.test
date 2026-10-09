@@ -1,11 +1,11 @@
-FROM mcr.microsoft.com/playwright:v1.51.1-noble
+FROM mcr.microsoft.com/playwright:v1.63.0-noble
 WORKDIR /home/pwuser
-RUN npm install -g npm@11.1.0
+RUN npm install -g npm@11.1.0 pnpm@9.15.9
 RUN ln -sf /usr/share/zoneinfo/CET /etc/localtime
 RUN mkdir -p /home/pwuser/tests && mkdir -p /home/pwuser/.npm && chown -R pwuser /home/pwuser/
-COPY package.json /home/pwuser/
-RUN yarn install
+COPY package.json pnpm-lock.yaml /home/pwuser/
+RUN pnpm install --frozen-lockfile
 COPY playwright.config.ts /home/pwuser/
 COPY tests/ /home/pwuser/tests/
 RUN chown -R pwuser /home/pwuser/
-RUN npx playwright install chromium
+RUN pnpm exec playwright install chromium

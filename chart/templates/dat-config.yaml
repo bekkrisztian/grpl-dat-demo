@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dat-sqlcontrollers
+type: Opaque
+stringData:
+  SQLController: >-
+    vehicleTypes:{"query":"select FZA, FZAB from dsearchtree.datecode2 where FZA like \"${FZA}\" group by FZA, FZAB order by FZA;","path":"vehicleTypes","controllerName":"vehicleTypes"}|
+    brands:{"query":"select HST, HSTB from (select HST, HSTB from dsearchtree.datecode2 where HSTB like \"${nameQuery}\" group by HST, HSTB union select HST, HSTB from dsearchtree.datecode2 where HST = \"${codeQuery}\" group by HST, HSTB) results order by HSTB limit 50;","path":"brands","controllerName":"brands"}|
+    modelRanges:{"query":"select OTG, OTGB from (select OTG, OTGB from dsearchtree.datecode2 where OTGB like \"${nameQuery}\" group by OTG, OTGB union select OTG, OTGB from dsearchtree.datecode2 where OTG like \"${codeQuery}\" group by OTG, OTGB) results order by OTGB limit 50;","path":"modelRanges","controllerName":"modelRanges"}|
+    modelGroups:{"query":"select HT, HTB from (select HT, HTB from dsearchtree.datecode2 where HTB like \"${nameQuery}\" group by HT, HTB union select HT, HTB from dsearchtree.datecode2 where HT = \"${codeQuery}\" group by HT, HTB) results order by HTB limit 50;","path":"modelGroups","controllerName":"modelGroups"}|
+    models:{"query":"select UT, UTB from (select UT, UTB from dsearchtree.datecode2 where UTB like \"${nameQuery}\" group by UT, UTB union select UT, UTB from dsearchtree.datecode2 where UT = \"${codeQuery}\" group by UT, UTB) results order by UTB limit 50;","path":"models","controllerName":"models"}|
+    brandsByVehicleType:{"query":"select FZA, HST, HSTB from dsearchtree.datecode2 where FZA = \"${FZA}\" group by FZA, HST, HSTB order by FZA, HSTB;","path":"brandsByVehicleType","controllerName":"brandsByVehicleType"}|
+    modelRangeByVehicleTypeAndManufacturer:{"query":"select FZA, HST, HSTB, OTG, OTGB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" group by FZA, HST, HSTB, OTG, OTGB order by FZA, OTGB;","path":"modelRangeByVehicleTypeAndManufacturer","controllerName":"modelRangeByVehicleTypeAndManufacturer"}|
+    modelGroupByVehicleTypeAndManufacturerAndModelRange:{"query":"select FZA, HST, HSTB, OTG, OTGB, HT, HTB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" and OTG = \"${OTG}\" group by FZA, HST, HSTB, OTG, OTGB, HT, HTB order by FZA, HSTB, OTGB;","path":"modelGroupByVehicleTypeAndManufacturerAndModelRange","controllerName":"modelGroupByVehicleTypeAndManufacturerAndModelRange"}|
+    modelByVehicleTypeAndManufacturerAndModelGroup:{"query":"select FZA, HST, HSTB, HT, HTB, UT, UTB from dsearchtree.datecode2 where FZA = \"${FZA}\" and HST = \"${HST}\" and HT = \"${HT}\" group by FZA, HST, HSTB, HT, HTB, UT, UTB order by FZA, HSTB;","path":"modelByVehicleTypeAndManufacturerAndModelGroup","controllerName":"modelByVehicleTypeAndManufacturerAndModelGroup"}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dat-layer2-config
+type: Opaque
+stringData:
+  # KubeBlocks serves the cache in this namespace and owns its password, which
+  # reaches the pod through the <release>-redis-account-default secret.
+  host: {{ printf "%s-redis-redis" .Release.Name | quote }}
+  port: "6379"
+  db: "0"
+  MCP_CONFIGS: '{"enable":true}'
+  LoggingConfigs: 'dsearchtree:{"loglevel":"info","httplog":true,"global":true,"group":"logging"}'

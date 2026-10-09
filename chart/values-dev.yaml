@@ -1,6 +1,6 @@
 env:
-# the env for REACT_APP_REMOTE_URL must stay in first position due to the patching
-- name: REACT_APP_REMOTE_URL
+# the remote URL must stay in first position due to the patching
+- name: SVELTE_APP_REMOTE_URL
   value: ""
   # value: "https://grpl-db-grpl-db-gruim.grpl-cli.grapple-demo.com"
 # the env for CONTAINER_NAME must stay in first position due to the patching
@@ -18,6 +18,10 @@ grases:
       autorestartgruim: false
     gruim:
       ssl: false
+  grascache:
+    grapi:
+      ssl: false
+      autorestartgruim: false
 
 
 ingress:

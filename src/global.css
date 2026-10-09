@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* One palette, defined once. Dark mode redefines the same names, so every
+   component can stay colour-agnostic. */
+:root {
+  color-scheme: light;
+  --dat-bg: 248 250 252;
+  --dat-surface: 255 255 255;
+  --dat-sunken: 241 245 249;
+  --dat-line: 226 232 240;
+  --dat-line-strong: 203 213 225;
+  --dat-ink: 15 23 42;
+  --dat-muted: 100 116 139;
+  --dat-accent: 37 56 229;
+  --dat-accent-hover: 29 44 196;
+  --dat-accent-soft: 238 242 255;
+  --dat-accent-ink: 255 255 255;
+  --dat-danger: 190 18 60;
+  --dat-danger-soft: 255 241 242;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --dat-bg: 2 6 23;
+    --dat-surface: 15 23 42;
+    --dat-sunken: 30 41 59;
+    --dat-line: 30 41 59;
+    --dat-line-strong: 51 65 85;
+    --dat-ink: 241 245 249;
+    --dat-muted: 148 163 184;
+    --dat-accent: 129 140 248;
+    --dat-accent-hover: 165 180 252;
+    --dat-accent-soft: 30 41 59;
+    --dat-accent-ink: 2 6 23;
+    --dat-danger: 251 113 133;
+    --dat-danger-soft: 42 14 24;
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: rgb(var(--dat-bg));
+  color: rgb(var(--dat-ink));
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Native selects keep their own arrow in every browser; replace it so the
+   control matches the rest of the form. */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+  background-position: right 0.65rem center;
+  background-repeat: no-repeat;
+  background-size: 1.25rem;
+  padding-right: 2.25rem;
+}
+
+.scrollarea {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--dat-line-strong)) transparent;
+}
+.scrollarea::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scrollarea::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--dat-line-strong));
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background-clip: content-box;
+}
