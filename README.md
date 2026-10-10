@@ -27,7 +27,7 @@ grpl-dat-demo/
 ├── grases/
 │   ├── gras/
 │   │   ├── grapi/          # Layer-one controllers and generated-code patches
-│   │   └── gruim/          # gruim bulk-fetch protection
+│   │   └── gruim/          # gruim bulk-fetch and primary-key patches
 │   └── grascache/          # Cache-layer extensions
 ├── src/                    # Svelte vehicle-search application
 ├── tests/                  # Playwright UI tests
@@ -40,15 +40,19 @@ grpl-dat-demo/
 
 Where the data lives depends on how you run the demo.
 
-**In a cluster, nothing.** The chart provisions its own MySQL and Redis through
-KubeBlocks and seeds `dsearchtree.datecode2` from `data/datecode2.sql.gz`, which
-is 3.4 MB in the repository and 142 MB once loaded. The `init-db` container only
-seeds when the table is empty, so a restart costs nothing; a first load takes
-about 30 seconds. Database credentials are generated into the
+**In the configured demo cluster, nothing.** The chart provisions its own MySQL
+and Redis through KubeBlocks and seeds `dsearchtree.datecode2` from
+`data/datecode2.sql.gz`, which is 3.4 MB in the repository and 142 MB once
+loaded. The `init-db` container only seeds when the table is empty, so a restart
+costs nothing; a first load takes up to several minutes, depending on the
+cluster. Database credentials are generated into the
 `dat-demo-db-mysql-account-root` secret, so none of them belong in a file here.
+Deploying under a different namespace or domain requires changing the two
+layer-one ingress URLs under `grases.grascache.grapi` in `chart/values.yaml`.
 
-**With Docker Compose, an external DAT database.** Compose starts the two APIs
-and the frontend but no database, so `.env` has to point at one:
+**With Docker Compose, an external DAT database and Redis.** Compose starts the
+two APIs and the frontend but neither data service, so `.env` has to point at
+both:
 
 | variable | default |
 | --- | --- |
@@ -84,8 +88,8 @@ prefix; `SVELTE_APP_TREE_API_URL` points to layer one without a path prefix.
 
 ## Complete Docker setup
 
-Copy `.env.example` to `.env` and fill in the DAT database settings. Then start
-the API and frontend:
+Copy `.env.example` to `.env` and fill in the DAT database and Redis settings.
+Then start the APIs and frontend:
 
 ```sh
 docker compose up --build
@@ -150,19 +154,24 @@ so the result table pages at 100 and shows the true total beside the range.
 
 gruim's "Select all" and its two export buttons each sent one request with no
 limit. `grases/gras/gruim/prepatches/page-bulk-fetches.sh` rewrites them to walk
-the table in pages, and warns rather than returning a truncated export when it
-stops at the ceiling:
+the table in pages. It stops at the safety ceiling and warns that the user must
+narrow the filter to process the remaining records:
 
 | key in `config.global` | default |
 | --- | --- |
 | `fetch-page-size` | 500 |
 | `max-records` | 5000 |
 
-`task patch-values-file` base64-encodes the gruim prepatch into the Helm values
-before deployment. The reset task clears that generated content afterwards, so
-the committed values file stays readable. A patch that cannot find the expected
-gruim source exits non-zero instead of silently leaving the unsafe bulk request
-in place.
+The `z-datecode-primary-key.sh` prepatch maps the table's `dateCode` primary key
+to the `id` expected by gruim actions. It also makes the edit form use
+`dateCode` in its request path and excludes the MySQL-generated `globalSearch`
+column from PATCH payloads.
+
+`task patch-values-file` encodes these prepatches for deployment, while
+`task patch-values-file-patches-only` does the same for `devspace dev`. The
+reset task clears the generated content afterwards, so the committed values
+file stays readable. A patch that cannot find the expected gruim source exits
+non-zero instead of silently leaving unsafe generated code in place.
 
 ## Grapple cluster development
 
@@ -177,19 +186,17 @@ and the generated credentials never leave the cluster.
 DevSpace forwards the demo UI to port `4000`, layer-one grapi to `3000`, the
 cached grapi to `3001`, and gruim to `8080`.
 
-Layer one serves MySQL. The `grascache` layer consumes layer one's internal
-OpenAPI endpoint, caches it in Redis and enables MCP. Its datasource is named
-`redis` rather than `redisDS` because a Crossplane `ManagedDataSource` name has
-to be an RFC 1123 subdomain, and an uppercase letter makes the release fail.
+Layer one serves MySQL. The `grascache` layer consumes layer one's OpenAPI
+document through its ingress, caches responses in Redis and enables MCP. Its
+datasource is named `redis` rather than `redisDS` because a Crossplane
+`ManagedDataSource` name has to be an RFC 1123 subdomain, and an uppercase
+letter makes the release fail.
 
 The cache layer carries no gruim of its own. Its OpenAPI spec duplicates the
 `where` parameter on every SQL controller path, which fails gruim's Swagger
 validation outright and, through the generated client, silently empties the
 option lists. Both are generator bugs; until they are fixed the browse tab loads
 `App/Datecode2` from layer one.
-
-Like the other cached Grapple applications, the cache imports layer one's
-OpenAPI document through its grapi ingress URL.
 
 Helm's own commands need the cluster lookups disabled to run offline, in this
 chart and in the other Grapple demos alike:

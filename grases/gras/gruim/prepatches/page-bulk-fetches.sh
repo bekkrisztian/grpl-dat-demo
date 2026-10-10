@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Page Gruim bulk actions to prevent Grapi heap exhaustion.
+# Page gruim bulk actions to prevent grapi heap exhaustion.
 
 node <<'NODE'
 const fs = require("fs");
@@ -25,8 +25,8 @@ const limitDeclaration =
 const limitDeclarationWithBounds = `${limitDeclaration}
 
   // Bulk-fetch bounds.
-  const fetchPageSize = config?.global?.["fetch-page-size"] || 1000;
-  const maxRecords = config?.global?.["max-records"] || 50000;`;
+  const fetchPageSize = Math.min(config?.global?.["fetch-page-size"] || 500, 500);
+  const maxRecords = Math.min(config?.global?.["max-records"] || 5000, 5000);`;
 
 const getAllRecords = `  const getAllRecords = async () => {
     let response = await execute(requests.find.replace(".", "_"), {
@@ -110,5 +110,5 @@ for (const [from, to] of replacements) {
 }
 
 fs.writeFileSync(file, source);
-console.log("Paged gruim's bulk fetches (page " + "1000, ceiling 50000 by default)");
+console.log("Paged gruim's bulk fetches (page 500, ceiling 5000 by default)");
 NODE

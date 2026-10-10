@@ -104,3 +104,33 @@ test('drops the pager when the criteria change', async ({ page }) => {
   await expect(page.getByRole('cell', { name: 'BMW' })).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Result pages' })).toHaveCount(0);
 });
+
+test('keeps the table head on the table at every width', async ({ page }) => {
+  for (const width of [1440, 1075, 1000, 820]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto('/');
+    await page.locator('#tree-fza').selectOption('1');
+    await page.getByRole('button', { name: 'Show vehicles' }).click();
+    await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
+
+    // An overflow on any ancestor makes it the sticky scroll container, and the
+    // head is then offset inside the table instead of pinned below the header.
+    const offset = await page.evaluate(() => {
+      const head = document.querySelector('thead')!.getBoundingClientRect();
+      const table = document.querySelector('table')!.getBoundingClientRect();
+      return Math.round(head.top - table.top);
+    });
+    expect(offset, `head offset at ${width}px`).toBe(0);
+
+    // The head must never ride above the page header, and the table must fit:
+    // a horizontal scroller would reintroduce the container that breaks both.
+    await page.mouse.wheel(0, 700);
+    const after = await page.evaluate(() => ({
+      head: Math.round(document.querySelector('thead')!.getBoundingClientRect().top),
+      header: Math.round(document.querySelector('header')!.getBoundingClientRect().bottom),
+      overflows: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    }));
+    expect(after.head, `head above the page header at ${width}px`).toBeGreaterThanOrEqual(after.header);
+    expect(after.overflows, `page scrolls sideways at ${width}px`).toBe(false);
+  }
+});

@@ -209,7 +209,7 @@
 <svelte:head><title>DAT vehicle search demo</title></svelte:head>
 
 <main class="min-h-screen bg-app-bg text-app-ink antialiased">
-  <header class="sticky top-0 z-20 border-b border-app-line bg-app-bg/85 backdrop-blur">
+  <header class="sticky top-0 z-20 border-b border-app-line bg-app-bg shadow-sm">
     <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-4 px-6 py-4">
       <div class="flex items-center gap-3">
         <span class="grid h-9 w-9 place-items-center rounded-xl bg-app-accent text-sm font-bold text-app-accent-ink">DAT</span>

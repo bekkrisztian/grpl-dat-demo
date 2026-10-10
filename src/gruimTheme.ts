@@ -35,20 +35,53 @@ export const adminModuleCss = `
   border-color: rgb(var(--dat-line)) !important;
 }
 
+/* The row element carries its own odd/even light background, and with the
+   default separate borders it shows through as a pale seam along the left edge
+   and between cells. Coloring only tbody and the cells leaves that seam
+   behind -- which is why it vanished under a hover, where the cells take over. */
 #admin-list-table tbody,
+#admin-list-table tbody tr,
+#admin-list-table tbody tr:nth-child(odd),
+#admin-list-table tbody tr:nth-child(even),
 #admin-list-table tbody tr:nth-child(odd) td,
 #admin-list-table tbody tr:nth-child(even) td {
   background: rgb(var(--dat-surface)) !important;
   color: rgb(var(--dat-ink)) !important;
 }
 
+#admin-list-table {
+  border-collapse: collapse !important;
+}
+
+#admin-list-table tbody tr:hover,
 #admin-list-table tbody tr:hover td {
   background: rgb(var(--dat-accent-soft)) !important;
 }
 
+/* Light borders reach the table from three directions: the cells carry
+   border-gray-300, the row separators come from divide-* classes that color
+   the tr rather than the cells, and the sticky first columns keep their own
+   light background as they pin. Horizontal scrolling parks that pale edge
+   against the table's left side. */
 #admin-list-table td,
-#admin-list-table th {
+#admin-list-table th,
+#admin-list-table tr,
+#admin-list-table thead,
+#admin-list-table tbody {
   border-color: rgb(var(--dat-line)) !important;
+}
+
+#admin-list-table [class*="sticky"] {
+  background: rgb(var(--dat-surface)) !important;
+  border-color: rgb(var(--dat-line)) !important;
+}
+
+#admin-list-table thead [class*="sticky"] {
+  background: rgb(var(--dat-sunken)) !important;
+}
+
+#admin-list-table tbody tr:hover [class*="sticky"] {
+  background: rgb(var(--dat-accent-soft)) !important;
 }
 
 #admin-list-table input,
@@ -71,9 +104,35 @@ button[class*="bg-primary"] {
   border-color: transparent !important;
 }
 
-/* The row actions menu is a bg-white panel whose items carry no colour class,
-   so they inherit the near-white text this theme sets on the container and
-   vanish against their own background. */
+/* Every menu the module opens -- row actions, both export menus -- is a white
+   panel positioned over the page. The export items carry their own grey text
+   and icons; the row actions carry none and inherit this theme's near-white.
+   Either way they are unreadable, so the panels are restyled wholesale. This
+   project's own markup has no bg-white, so the match stays with the module. */
+div[class*="bg-white"][class*="absolute"] {
+  background: rgb(var(--dat-surface)) !important;
+  border: 1px solid rgb(var(--dat-line)) !important;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+}
+
+div[class*="bg-white"][class*="absolute"] span,
+div[class*="bg-white"][class*="absolute"] button,
+div[class*="bg-white"][class*="absolute"] [class*="text-gray-600"],
+div[class*="bg-white"][class*="absolute"] [class*="text-gray-700"] {
+  color: rgb(var(--dat-ink)) !important;
+}
+
+div[class*="bg-white"][class*="absolute"] svg,
+div[class*="bg-white"][class*="absolute"] [class*="text-gray-400"] {
+  color: rgb(var(--dat-muted)) !important;
+}
+
+div[class*="bg-white"][class*="absolute"] > span:hover,
+div[class*="bg-white"][class*="absolute"] > button:hover {
+  background: rgb(var(--dat-accent) / 0.2) !important;
+}
+
 #admin-list-table div[class*="bg-white"] {
   background: rgb(var(--dat-surface)) !important;
   border: 1px solid rgb(var(--dat-line)) !important;
@@ -93,7 +152,10 @@ button[class*="bg-primary"] {
 #admin-list-table [class*="hover:bg-gray-50"]:hover,
 #admin-list-table div[class*="bg-white"] button:hover,
 nav[aria-label="Pagination"] [class*="hover:bg-gray-50"]:hover {
-  background: rgb(var(--dat-accent-soft)) !important;
+  /* A tint of the accent, not the soft surface: that one differs from a table
+     row by a single step and reads as no feedback at all. */
+  background: rgb(var(--dat-accent) / 0.2) !important;
+  border-radius: 0.375rem;
 }
 
 /* Labels and icons inside a filled button hold their own colour -- the icon is
@@ -103,6 +165,20 @@ button[class*="bg-primary"] svg,
 button[class*="bg-primary"] path {
   color: rgb(var(--dat-accent-ink)) !important;
   stroke: currentColor;
+}
+
+.dat-select-all-progress [class*="text-gray-600"] {
+  color: rgb(var(--dat-muted)) !important;
+}
+
+.dat-select-all-progress [class*="bg-gray-200"] {
+  background: rgb(var(--dat-line)) !important;
+  box-shadow: none !important;
+}
+
+.dat-select-all-progress [class*="bg-primary"] {
+  background: rgb(var(--dat-accent)) !important;
+  color: rgb(var(--dat-accent-ink)) !important;
 }
 
 /* The pager's white band is a wrapper around the nav, not the nav itself. */
@@ -131,7 +207,7 @@ nav[aria-label="Pagination"] button[class*="bg-indigo-50"] {
 }
 
 /* Toasts sit in their own fixed container. An error is tinted with the module's
-   salmon danger colour and dark text, which reads on a light page and not here;
+   salmon danger color and dark text, which reads on a light page and not here;
    the close button then shows the page through it. */
 .fixed [class*="bg-danger"] {
   background: rgb(var(--dat-danger-soft)) !important;

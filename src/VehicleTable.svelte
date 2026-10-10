@@ -21,18 +21,18 @@
     {/if}
   </p>
 
-  <div class="overflow-hidden rounded-2xl border border-app-line bg-app-surface shadow-sm">
-    <div class="scrollarea max-h-[34rem] overflow-auto">
-      <table class="min-w-full text-left text-sm">
-        <thead class="sticky top-0 z-10 bg-app-sunken/95 backdrop-blur">
+  <div class="rounded-2xl border border-app-line bg-app-surface shadow-sm">
+    <div>
+      <table class="w-full table-fixed text-left text-sm">
+        <thead class="sticky z-10 bg-app-sunken shadow-sm" style="top: var(--app-header-h)">
           <tr class="text-xs uppercase tracking-wider text-app-muted">
-            <th class="px-4 py-3 font-semibold">DAT code</th>
-            <th class="px-4 py-3 font-semibold">Manufacturer</th>
-            <th class="px-4 py-3 font-semibold">Model range</th>
-            <th class="px-4 py-3 font-semibold">Model group</th>
-            <th class="px-4 py-3 font-semibold">Model</th>
-            <th class="px-4 py-3 font-semibold">Engine</th>
-            <th class="px-4 py-3 text-right font-semibold">Power</th>
+            <th class="w-[14%] rounded-tl-2xl px-4 py-3 font-semibold">DAT code</th>
+            <th class="w-[13%] px-4 py-3 font-semibold">Manufacturer</th>
+            <th class="w-[10%] px-4 py-3 font-semibold">Model range</th>
+            <th class="w-[17%] px-4 py-3 font-semibold">Model group</th>
+            <th class="w-[15%] px-4 py-3 font-semibold">Model</th>
+            <th class="w-[22%] px-4 py-3 font-semibold">Engine</th>
+            <th class="w-[9%] rounded-tr-2xl px-4 py-3 text-right font-semibold">Power</th>
           </tr>
         </thead>
         <tbody>

@@ -5,6 +5,9 @@
 /* One palette, defined once. Dark mode redefines the same names, so every
    component can stay colour-agnostic. */
 :root {
+  /* Height of the sticky page header, so a sticky table head can sit under it
+     instead of needing a scroll container of its own. */
+  --app-header-h: 75px;
   color-scheme: light;
   --dat-bg: 248 250 252;
   --dat-surface: 255 255 255;
@@ -64,6 +67,9 @@ select {
 .scrollarea {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--dat-line-strong)) transparent;
+  /* Reserve the track, so the sticky header ends where the bar begins instead
+     of running under it. */
+  scrollbar-gutter: stable;
 }
 .scrollarea::-webkit-scrollbar {
   width: 10px;
