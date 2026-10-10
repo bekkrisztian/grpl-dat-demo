@@ -20,6 +20,12 @@
   let fuzzyHasNext = false;
   let fuzzySearched = false;
   let fuzzyError = "";
+  let fuzzyFiltersKey = 0;
+  let fuzzyRequestId = 0;
+
+  $: canClear = Boolean(
+    fuzzyText || Object.values(fuzzyCriteria).some(Boolean) || fuzzySearched || fuzzyError,
+  );
 
   const runFuzzySearch = async () => {
     if (!fuzzyText.trim()) return;
@@ -28,25 +34,42 @@
   };
 
   const loadFuzzyPage = async (page: number, refreshTotal = false) => {
+    const requestId = ++fuzzyRequestId;
     fuzzyLoading = "results"; fuzzyError = ""; fuzzySearched = true;
     try {
       const [vehicles, total] = await Promise.all([
         fuzzySearchVehicles(fuzzyText, fuzzyCriteria, (page - 1) * PAGE_SIZE),
         refreshTotal ? countFuzzyVehicles(fuzzyText, fuzzyCriteria) : Promise.resolve(fuzzyTotal),
       ]);
+      if (requestId !== fuzzyRequestId) return;
       fuzzyResults = vehicles;
       fuzzyTotal = total;
       fuzzyHasNext = page * PAGE_SIZE < total;
       fuzzyPage = page;
     } catch (error) {
+      if (requestId !== fuzzyRequestId) return;
       fuzzyError = message(error); fuzzyResults = []; fuzzyHasNext = false; fuzzyTotal = 0;
     }
-    finally { fuzzyLoading = ""; }
+    finally { if (requestId === fuzzyRequestId) fuzzyLoading = ""; }
   };
 
   const goToFuzzyPage = (page: number) => {
     if (page < 1 || page === fuzzyPage || fuzzyLoading) return;
     return loadFuzzyPage(page);
+  };
+
+  const clearFuzzySearch = () => {
+    fuzzyRequestId += 1;
+    fuzzyText = "";
+    fuzzyCriteria = emptyCriteria();
+    fuzzyResults = [];
+    fuzzyPage = 1;
+    fuzzyTotal = 0;
+    fuzzyHasNext = false;
+    fuzzySearched = false;
+    fuzzyError = "";
+    fuzzyLoading = "";
+    fuzzyFiltersKey += 1;
   };
 </script>
 
@@ -65,18 +88,21 @@
 
       <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
         <div class="lg:col-span-2"><FilterSelect id="fuzzy-fza" label="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional /></div>
-        <SearchableFilter id="fuzzy-hst" label="HST" bind:value={fuzzyCriteria.hst} loadOptions={searchBrands} />
-        <SearchableFilter id="fuzzy-otg" label="OTG" bind:value={fuzzyCriteria.otg} loadOptions={searchModelRanges} />
-        <SearchableFilter id="fuzzy-ht" label="HT" bind:value={fuzzyCriteria.ht} loadOptions={searchModelGroups} />
-        <SearchableFilter id="fuzzy-ut" label="UT" bind:value={fuzzyCriteria.ut} loadOptions={searchModels} />
+        {#key fuzzyFiltersKey}
+          <SearchableFilter id="fuzzy-hst" label="HST" bind:value={fuzzyCriteria.hst} loadOptions={searchBrands} />
+          <SearchableFilter id="fuzzy-otg" label="OTG" bind:value={fuzzyCriteria.otg} loadOptions={searchModelRanges} />
+          <SearchableFilter id="fuzzy-ht" label="HT" bind:value={fuzzyCriteria.ht} loadOptions={searchModelGroups} />
+          <SearchableFilter id="fuzzy-ut" label="UT" bind:value={fuzzyCriteria.ut} loadOptions={searchModels} />
+        {/key}
       </div>
 
-      <div class="mt-6 border-t border-app-line pt-5">
+      <div class="mt-6 flex items-center gap-4 border-t border-app-line pt-5">
         <button type="submit"
           class="btn-accent rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-accent/25 disabled:cursor-not-allowed disabled:border disabled:border-app-line disabled:shadow-none"
           disabled={!fuzzyText.trim() || fuzzyLoading === "results"}>
           {fuzzyLoading === "results" ? "Searching…" : "Find vehicles"}
         </button>
+        <button type="button" class="px-1 py-2.5 text-sm font-medium text-app-muted transition hover:text-app-ink disabled:cursor-not-allowed disabled:opacity-40" disabled={!canClear} on:click={clearFuzzySearch}>Clear all</button>
       </div>
     </form>
 

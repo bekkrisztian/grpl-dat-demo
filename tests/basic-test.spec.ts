@@ -74,6 +74,25 @@ test('runs fuzzy text search with optional criteria', async ({ page }) => {
   await expect(page.getByText('1 vehicle', { exact: false })).toBeVisible();
 });
 
+test('clears the fuzzy search and all filters', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+  await page.locator('#fuzzy-text').fill('BMW diesel automatic');
+  await page.locator('#fuzzy-fza').selectOption('1');
+  await page.locator('#fuzzy-hst').fill('BMW');
+  await page.getByRole('option', { name: 'BMW (130)' }).click();
+  await page.getByRole('button', { name: 'Find vehicles' }).click();
+  await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Clear all' }).click();
+
+  await expect(page.locator('#fuzzy-text')).toHaveValue('');
+  await expect(page.locator('#fuzzy-fza')).toHaveValue('');
+  await expect(page.locator('#fuzzy-hst')).toHaveValue('');
+  await expect(page.getByRole('cell', { name: 'BMW' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Clear all' })).toBeDisabled();
+});
+
 test('pages fuzzy results without loading the complete result set', async ({ page }) => {
   await page.route('**/datecode2s/count*', (route) => route.fulfill({ json: { count: 101 } }));
   await page.route('**/dsearchtrees/datecode2s/fuzzy/Dacia*', async (route) => {
