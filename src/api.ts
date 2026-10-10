@@ -57,7 +57,7 @@ const compact = <T extends Option>(items: T[]) => items.filter(
 
 export const emptyCriteria = (): Criteria => ({ fza: "", hst: "", otg: "", ht: "", ut: "" });
 
-// Fallback for Grapi's parameterless SQL controller issue.
+// Fallback for grapi's parameterless SQL controller issue.
 const KNOWN_VEHICLE_TYPES: Option[] = [
   { value: "1", label: "Pkw, SUV, Kleintransporter" },
   { value: "2", label: "Transporter" },

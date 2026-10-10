@@ -7,7 +7,7 @@ A Grapple/Svelte demo for DAT vehicle selection and fuzzy vehicle search.
 - Cascading vehicle search: `FZA → HST → OTG → HT → UT`
 - Vehicle result list
 - Fuzzy search using any of the available vehicle criteria
-- A browse tab that embeds the layer-one Gruim admin module for `datecode2`
+- A browse tab that embeds the layer-one gruim admin module for `datecode2`
 
 Vehicle queries go through the Redis-backed layer-two API, which caches layer
 one's OpenAPI proxy and serves the MCP endpoint. The search tree's option lists
@@ -21,13 +21,13 @@ every lookup comes back empty.
 grpl-dat-demo/
 ├── chart/
 │   ├── templates/          # Application, MySQL, Redis and Grapple resources
-│   └── values.yaml         # Layer-one, cache and Gruim configuration
+│   └── values.yaml         # Layer-one, cache and gruim configuration
 ├── data/
 │   └── datecode2.sql.gz    # DAT database seed
 ├── grases/
 │   ├── gras/
 │   │   ├── grapi/          # Layer-one controllers and generated-code patches
-│   │   └── gruim/          # Gruim bulk-fetch protection
+│   │   └── gruim/          # gruim bulk-fetch protection
 │   └── grascache/          # Cache-layer extensions
 ├── src/                    # Svelte vehicle-search application
 ├── tests/                  # Playwright UI tests
@@ -97,10 +97,10 @@ layer-two proxy at <http://localhost:3334>, and the demo UI at
 controllers and can take approximately two minutes. Layer two uses layer one's
 internal OpenAPI URL, caches responses for 6,000,000 ms, and enables MCP.
 
-The browse tab loads `App/Datecode2` from the layer-one Gruim over module
+The browse tab loads `App/Datecode2` from the layer-one gruim over module
 federation, and the module is imported on demand so the tab can explain itself
 when the remote is absent, as in local Docker runs. Vehicle queries go to the
-cached Grapi through the `/dsearchtree` prefix; the search tree's option lists
+cached grapi through the `/dsearchtree` prefix; the search tree's option lists
 go straight to layer one on `SVELTE_APP_TREE_API_URL`, for the reason given
 under [Scope](#scope).
 
@@ -148,20 +148,20 @@ Two changes keep requests away from that ceiling.
 The UI asks for one page at a time. A single vehicle type matches 152,070 rows,
 so the result table pages at 100 and shows the true total beside the range.
 
-Gruim's "Select all" and its two export buttons each sent one request with no
+gruim's "Select all" and its two export buttons each sent one request with no
 limit. `grases/gras/gruim/prepatches/page-bulk-fetches.sh` rewrites them to walk
 the table in pages, and warns rather than returning a truncated export when it
 stops at the ceiling:
 
 | key in `config.global` | default |
 | --- | --- |
-| `fetch-page-size` | 1000 |
-| `max-records` | 50000 |
+| `fetch-page-size` | 500 |
+| `max-records` | 5000 |
 
-`task patch-values-file` base64-encodes the Gruim prepatch into the Helm values
+`task patch-values-file` base64-encodes the gruim prepatch into the Helm values
 before deployment. The reset task clears that generated content afterwards, so
 the committed values file stays readable. A patch that cannot find the expected
-Gruim source exits non-zero instead of silently leaving the unsafe bulk request
+gruim source exits non-zero instead of silently leaving the unsafe bulk request
 in place.
 
 ## Grapple cluster development
@@ -174,30 +174,22 @@ devspace dev
 There is no secret file to prepare: the chart brings its own MySQL and Redis,
 and the generated credentials never leave the cluster.
 
-DevSpace forwards the demo UI to port `4000`, layer-one Grapi to `3000`, the
-cached Grapi to `3001`, and Gruim to `8080`.
+DevSpace forwards the demo UI to port `4000`, layer-one grapi to `3000`, the
+cached grapi to `3001`, and gruim to `8080`.
 
 Layer one serves MySQL. The `grascache` layer consumes layer one's internal
 OpenAPI endpoint, caches it in Redis and enables MCP. Its datasource is named
 `redis` rather than `redisDS` because a Crossplane `ManagedDataSource` name has
 to be an RFC 1123 subdomain, and an uppercase letter makes the release fail.
 
-The cache layer carries no Gruim of its own. Its OpenAPI spec duplicates the
-`where` parameter on every SQL controller path, which fails Gruim's Swagger
+The cache layer carries no gruim of its own. Its OpenAPI spec duplicates the
+`where` parameter on every SQL controller path, which fails gruim's Swagger
 validation outright and, through the generated client, silently empties the
 option lists. Both are generator bugs; until they are fixed the browse tab loads
 `App/Datecode2` from layer one.
 
-After a `helm upgrade`, the short `gras-grapi` service can end up selecting on a
-`helm.sh/revision` the running pods no longer carry, leaving it with no
-endpoints. Gruim's init container waits on exactly that service, so it sits in
-`Init:0/1` for its full 30 minute timeout. Dropping the label from the selector
-restores it without touching a pod:
-
-```sh
-kubectl -n <namespace> patch svc gras-grapi --type=json \
-  -p '[{"op":"remove","path":"/spec/selector/helm.sh~1revision"}]'
-```
+Like the other cached Grapple applications, the cache imports layer one's
+OpenAPI document through its grapi ingress URL.
 
 Helm's own commands need the cluster lookups disabled to run offline, in this
 chart and in the other Grapple demos alike:

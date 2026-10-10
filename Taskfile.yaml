@@ -164,7 +164,7 @@ tasks:
         devspace build --tag "{{.TAG}}" -n default --no-warn
 
   patch-values-file-patches-only:
-    desc: Gather and encode backend (grapi) injections (patches only)
+    desc: Gather and encode grapi and gruim shell patches
           and update values.yaml
     cmds:
         - echo "2) Looping over all grases/*/grapi* folders to patch grapi injections..."
@@ -217,6 +217,36 @@ tasks:
                 group_name="controllers"
               fi
               yq -i ".grases.${GRAS_NAME}.grapi.${group_name} += [{\"name\": \"${injection_name}\", \"content\": \"${base64_content}\"}]" "{{.VALUES_YAML_PATH}}"
+            done
+          done
+        - echo "3) Looping over all grases/*/gruim* folders to patch gruim injections..."
+        - |
+          BASE_GRAS_FOLDER="grases"
+          BASE64=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo "base64"; else echo "base64 -w 0"; fi)
+          if [ ! -d "${BASE_GRAS_FOLDER}" ]; then
+            echo "No grases folder found, skipping."
+            exit 0
+          fi
+
+          for gruim_dir in ${BASE_GRAS_FOLDER}/*/gruim*; do
+            [ -d "${gruim_dir}" ] || continue
+            GRAS_DIR=$(dirname "${gruim_dir}")
+            GRAS_NAME=$(basename "${GRAS_DIR}")
+
+            for patch_folder in prepatches postpatches; do
+              PATCHFILES=$(find "${gruim_dir}/${patch_folder}" -type f -name '*.sh' 2>/dev/null | sort || true)
+              if [ -z "${PATCHFILES}" ]; then
+                continue
+              fi
+
+              yq -i ".grases.${GRAS_NAME}.gruim.${patch_folder} = []" "{{.VALUES_YAML_PATH}}"
+              for file_path in ${PATCHFILES}; do
+                file_name=$(basename "${file_path}")
+                injection_name="${file_name%.*}"
+                base64_content=$(tr -d '\r' < "${file_path}" | ${BASE64})
+                echo "patching: ${GRAS_NAME}/gruim - ${patch_folder} - ${injection_name} - ${file_name}"
+                yq -i ".grases.${GRAS_NAME}.gruim.${patch_folder} += [{\"name\": \"${injection_name}\", \"content\": \"${base64_content}\"}]" "{{.VALUES_YAML_PATH}}"
+              done
             done
           done
 
@@ -437,7 +467,7 @@ tasks:
             done
           fi
 
-          # Inject Gruim shell patches separately.
+          # Inject gruim shell patches separately.
           for patch_folder in prepatches postpatches; do
             PATCHFILES=$(find "${GRUIM_FOLDER}/${patch_folder}" -type f -name '*.sh' 2>/dev/null | sort || true)
             if [ -z "${PATCHFILES}" ]; then

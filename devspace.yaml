@@ -49,7 +49,7 @@ pipelines:
       echo "waiting on chart deployment..."
       reset-values-file
       wait-for-deployment ${APP_NAME}-gras-grapi 600
-      # Cache Grapi depends on layer one.
+      # Cache grapi depends on layer one.
       wait-for-deployment ${APP_NAME}-grascache-grapi 600
       start_dev grapi &
       start_dev grapi-cache &
@@ -150,7 +150,7 @@ dev:
       app.kubernetes.io/name: gruim
       grpl.io/resourceName: ${APP_NAME}-gras-gruim
     devImage: grpl/gruim:0.3.62
-    # Build assets before starting the Gruim dev server.
+    # Build assets before starting the gruim dev server.
     command:
       - sh
       - -c
@@ -212,7 +212,7 @@ dev:
     open:
       - url: http://localhost:3000
   grapi-cache:
-    # Cache Grapi only needs port forwarding.
+    # Cache grapi only needs port forwarding.
     labelSelector:
       app.kubernetes.io/name: grapi
       grpl.io/resourceName: ${APP_NAME}-grascache-grapi

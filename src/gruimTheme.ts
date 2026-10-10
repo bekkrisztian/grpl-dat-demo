@@ -130,6 +130,34 @@ nav[aria-label="Pagination"] button[class*="bg-indigo-50"] {
   border-color: rgb(var(--dat-accent)) !important;
 }
 
+/* Toasts sit in their own fixed container. An error is tinted with the module's
+   salmon danger colour and dark text, which reads on a light page and not here;
+   the close button then shows the page through it. */
+.fixed [class*="bg-danger"] {
+  background: rgb(var(--dat-danger-soft)) !important;
+  border-color: rgb(var(--dat-danger) / 0.4) !important;
+  color: rgb(var(--dat-danger)) !important;
+}
+
+.fixed [class*="bg-primary"]:not(button) {
+  background: rgb(var(--dat-accent-soft)) !important;
+  border-color: rgb(var(--dat-accent) / 0.4) !important;
+  color: rgb(var(--dat-ink)) !important;
+}
+
+.fixed [class*="bg-danger"] button,
+.fixed [class*="bg-danger"] span,
+.fixed [class*="bg-primary"]:not(button) button,
+.fixed [class*="bg-primary"]:not(button) span {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.fixed [class*="bg-danger"] button:hover,
+.fixed [class*="bg-primary"]:not(button) button:hover {
+  background: rgb(var(--dat-ink) / 0.1) !important;
+}
+
 /* Dialogs (filter, create, confirm) mount in a fixed overlay outside the table,
    so the rules above never reach them. They are the module's own light surfaces,
    and without this the fields inherit the page's near-white text onto white.
