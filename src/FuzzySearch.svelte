@@ -75,24 +75,24 @@
 
   <section aria-labelledby="fuzzy-title">
     <div class="mb-7 max-w-2xl">
-      <h2 id="fuzzy-title" class="text-3xl font-bold tracking-tight">Fuzzy vehicle search</h2>
-      <p class="mt-2 text-app-muted">Describe the vehicle in your own words. Narrow it with any of the DAT criteria, in any combination.</p>
+      <h2 id="fuzzy-title" class="text-3xl font-bold tracking-tight">Search by vehicle description</h2>
+      <p class="mt-2 text-app-muted">Enter a make, model or feature. Use the optional filters to narrow the results.</p>
     </div>
 
     <form class="rounded-2xl border border-app-line bg-app-surface p-6 shadow-sm" on:submit|preventDefault={runFuzzySearch}>
       <label class="block" for="fuzzy-text">
-        <span class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-app-muted">Fuzzy text</span>
+        <span class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-app-muted">Vehicle description</span>
         <input id="fuzzy-text" bind:value={fuzzyText} placeholder="e.g. BMW diesel automatic"
           class="w-full rounded-xl border border-app-line bg-app-surface px-4 py-3 text-base text-app-ink shadow-sm outline-none transition placeholder:text-app-muted/60 hover:border-app-line-strong focus-visible:border-app-accent focus-visible:ring-4 focus-visible:ring-app-accent/15" />
       </label>
 
-      <div class="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
-        <div class="lg:col-span-2"><FilterSelect id="fuzzy-fza" label="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional /></div>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div><FilterSelect id="fuzzy-fza" label="Vehicle type" code="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional /></div>
         {#key fuzzyFiltersKey}
-          <SearchableFilter id="fuzzy-hst" label="HST" bind:value={fuzzyCriteria.hst} loadOptions={searchBrands} />
-          <SearchableFilter id="fuzzy-otg" label="OTG" bind:value={fuzzyCriteria.otg} loadOptions={searchModelRanges} />
-          <SearchableFilter id="fuzzy-ht" label="HT" bind:value={fuzzyCriteria.ht} loadOptions={searchModelGroups} />
-          <SearchableFilter id="fuzzy-ut" label="UT" bind:value={fuzzyCriteria.ut} loadOptions={searchModels} />
+          <SearchableFilter id="fuzzy-hst" label="Manufacturer" code="HST" bind:value={fuzzyCriteria.hst} loadOptions={searchBrands} />
+          <SearchableFilter id="fuzzy-otg" label="Model range" code="OTG" bind:value={fuzzyCriteria.otg} loadOptions={searchModelRanges} />
+          <SearchableFilter id="fuzzy-ht" label="Model group" code="HT" bind:value={fuzzyCriteria.ht} loadOptions={searchModelGroups} />
+          <SearchableFilter id="fuzzy-ut" label="Model" code="UT" bind:value={fuzzyCriteria.ut} loadOptions={searchModels} />
         {/key}
       </div>
 

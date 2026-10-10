@@ -109,27 +109,27 @@
 
   <section aria-labelledby="tree-title">
     <div class="mb-7 max-w-2xl">
-      <h2 id="tree-title" class="text-3xl font-bold tracking-tight">Structured vehicle selection</h2>
-      <p class="mt-2 text-app-muted">Narrow from left to right. You can list the vehicles at any depth, from the vehicle type down to a single model.</p>
+      <h2 id="tree-title" class="text-3xl font-bold tracking-tight">Find a vehicle step by step</h2>
+      <p class="mt-2 text-app-muted">Start with a vehicle type, then narrow the results by manufacturer, model range, model group and model.</p>
     </div>
 
     <div class="rounded-2xl border border-app-line bg-app-surface p-6 shadow-sm">
-      <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-6">
-        <div class="lg:col-span-2" on:change={treeFzaChanged}><FilterSelect id="tree-fza" label="FZA" bind:value={treeCriteria.fza} options={vehicleTypes} loading={initialLoading} /></div>
-        <div on:change={treeHstChanged}><FilterSelect id="tree-hst" label="HST" bind:value={treeCriteria.hst} options={treeBrands} disabled={!treeCriteria.fza} loading={treeLoading === "hst"} /></div>
-        <div on:change={treeOtgChanged}><FilterSelect id="tree-otg" label="OTG" bind:value={treeCriteria.otg} options={treeRanges} disabled={!treeCriteria.hst} loading={treeLoading === "otg"} /></div>
-        <div on:change={treeHtChanged}><FilterSelect id="tree-ht" label="HT" bind:value={treeCriteria.ht} options={treeGroups} disabled={!treeCriteria.otg} loading={treeLoading === "ht"} /></div>
-        <FilterSelect id="tree-ut" label="UT" bind:value={treeCriteria.ut} options={treeModels} disabled={!treeCriteria.ht} loading={treeLoading === "ut"} />
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div on:change={treeFzaChanged}><FilterSelect id="tree-fza" label="Vehicle type" code="FZA" bind:value={treeCriteria.fza} options={vehicleTypes} loading={initialLoading} /></div>
+        <div on:change={treeHstChanged}><FilterSelect id="tree-hst" label="Manufacturer" code="HST" bind:value={treeCriteria.hst} options={treeBrands} disabled={!treeCriteria.fza} loading={treeLoading === "hst"} /></div>
+        <div on:change={treeOtgChanged}><FilterSelect id="tree-otg" label="Model range" code="OTG" bind:value={treeCriteria.otg} options={treeRanges} disabled={!treeCriteria.hst} loading={treeLoading === "otg"} /></div>
+        <div on:change={treeHtChanged}><FilterSelect id="tree-ht" label="Model group" code="HT" bind:value={treeCriteria.ht} options={treeGroups} disabled={!treeCriteria.otg} loading={treeLoading === "ht"} /></div>
+        <FilterSelect id="tree-ut" label="Model" code="UT" bind:value={treeCriteria.ut} options={treeModels} disabled={!treeCriteria.ht} loading={treeLoading === "ut"} />
       </div>
 
       <div class="mt-6 flex flex-wrap items-center gap-3 border-t border-app-line pt-5">
         <button
           class="btn-accent rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-app-accent/25 disabled:cursor-not-allowed disabled:border disabled:border-app-line disabled:shadow-none"
           disabled={!treeCriteria.fza || treeLoading === "results"} on:click={runTreeSearch}>
-          {treeLoading === "results" ? "Loading vehicles…" : "Show vehicles"}
+          {treeLoading === "results" ? "Searching…" : "Find vehicles"}
         </button>
         {#if treeCriteria.fza}
-          <button class="rounded-xl px-3 py-2 text-sm font-medium text-app-muted transition hover:text-app-ink" on:click={clearTree}>Clear</button>
+          <button class="rounded-xl px-3 py-2 text-sm font-medium text-app-muted transition hover:text-app-ink" on:click={clearTree}>Clear all</button>
         {/if}
       </div>
     </div>
@@ -150,4 +150,3 @@
       {/if}
     </div>
   </section>
-

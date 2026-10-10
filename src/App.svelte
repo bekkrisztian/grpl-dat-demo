@@ -23,7 +23,7 @@
   });
 </script>
 
-<svelte:head><title>DAT vehicle search demo</title></svelte:head>
+<svelte:head><title>DAT vehicle catalogue</title></svelte:head>
 
 <main class="min-h-screen bg-app-bg text-app-ink antialiased">
   <header class="sticky top-0 z-20 border-b border-app-line bg-app-bg shadow-sm">
@@ -32,20 +32,20 @@
         <span class="grid h-9 w-9 place-items-center rounded-xl bg-app-accent text-sm font-bold text-app-accent-ink">DAT</span>
         <div class="leading-tight">
           <h1 class="text-base font-semibold">Vehicle search</h1>
-          <p class="text-xs text-app-muted">Structured tree, fuzzy text and the raw table</p>
+          <p class="text-xs text-app-muted">Find and explore vehicles in the DAT catalogue</p>
         </div>
       </div>
 
       <nav class="ml-auto inline-flex rounded-xl border border-app-line bg-app-surface p-1 shadow-sm" aria-label="Search modes">
         <button
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'tree' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
-          on:click={() => view = "tree"}>Search tree</button>
+          on:click={() => view = "tree"}>Guided search</button>
         <button
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'fuzzy' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
-          on:click={() => view = "fuzzy"}>Fuzzy search</button>
+          on:click={() => view = "fuzzy"}>Description search</button>
         <button
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'browse' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
-          on:click={() => view = "browse"}>Browse data</button>
+          on:click={() => view = "browse"}>All vehicles</button>
       </nav>
     </div>
   </header>
@@ -53,7 +53,7 @@
   <div class="mx-auto max-w-7xl px-6 py-10">
     {#if startupError}
       <div role="alert" class="mb-8 flex items-start gap-3 rounded-xl border border-app-danger/30 bg-app-danger-soft px-4 py-3 text-sm text-app-danger">
-        <span class="mt-0.5 font-semibold">DAT API unavailable</span>
+        <span class="mt-0.5 font-semibold">Vehicle data is unavailable</span>
         <span class="text-app-danger/80">{startupError}</span>
       </div>
     {/if}
@@ -65,8 +65,8 @@
     {:else}
       <section aria-labelledby="browse-title">
         <div class="mb-7 max-w-2xl">
-          <h2 id="browse-title" class="text-3xl font-bold tracking-tight">All DAT vehicles</h2>
-          <p class="mt-2 text-app-muted">The full datecode2 table through the generated Grapple admin module, with filtering and paging.</p>
+          <h2 id="browse-title" class="text-3xl font-bold tracking-tight">Vehicle catalogue</h2>
+          <p class="mt-2 text-app-muted">Browse, filter and manage all available DAT vehicle records.</p>
         </div>
         <BrowseTable />
       </section>

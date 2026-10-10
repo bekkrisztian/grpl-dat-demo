@@ -56,23 +56,25 @@ const compact = <T extends Option>(items: T[]) => items.filter(
 );
 
 export const errorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : "The DAT API request failed.";
+  error instanceof Error ? error.message : "Could not load vehicle data.";
 
 export const emptyCriteria = (): Criteria => ({ fza: "", hst: "", otg: "", ht: "", ut: "" });
 
 // Fallback for grapi's parameterless SQL controller issue.
 const KNOWN_VEHICLE_TYPES: Option[] = [
-  { value: "1", label: "Pkw, SUV, Kleintransporter" },
-  { value: "2", label: "Transporter" },
-  { value: "3", label: "Kraftrad" },
-  { value: "4", label: "Lastkraftwagen" },
-  { value: "5", label: "Omnibus" },
+  { value: "1", label: "Cars, SUVs and light commercial vehicles" },
+  { value: "2", label: "Vans" },
+  { value: "3", label: "Motorcycles" },
+  { value: "4", label: "Trucks" },
+  { value: "5", label: "Buses" },
 ];
 
 export const loadVehicleTypes = async (): Promise<Option[]> => {
   try {
     const options = await sqlOptions("/vehicleTypes", { FZA: "%" }, "FZA", "FZAB");
-    if (options.length) return options;
+    if (options.length) return options.map((option) =>
+      KNOWN_VEHICLE_TYPES.find(({ value }) => value === option.value) ?? option,
+    );
   } catch {
     // fall through to the known categories
   }

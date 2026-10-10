@@ -3,6 +3,7 @@
 
   export let id: string;
   export let label: string;
+  export let code = "";
   export let value = "";
   export let options: Option[] = [];
   export let disabled = false;
@@ -24,10 +25,12 @@
 </script>
 
 <label class="block" for={id}>
-  <span class="mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-app-muted">
-    {label}
-    {#if optional}<span class="font-medium normal-case tracking-normal text-app-muted/70">optional</span>{/if}
-  </span>
+    <span class="mb-1.5 block min-h-9 text-xs text-app-muted">
+      <span class="block truncate font-semibold uppercase tracking-wider">{label}</span>
+      <span class="mt-0.5 block h-4 font-medium normal-case tracking-normal text-app-muted/70">
+        {#if code}({code}){/if}{#if code && optional}<span aria-hidden="true"> · </span>{/if}{#if optional}Optional{/if}
+      </span>
+    </span>
   <select
     {id}
     bind:value

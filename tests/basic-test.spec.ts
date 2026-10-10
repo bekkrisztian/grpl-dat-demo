@@ -56,7 +56,7 @@ test('loads the structured search tree and lists vehicles', async ({ page }) => 
   await page.locator('#tree-otg').selectOption('3');
   await page.locator('#tree-ht').selectOption('42');
   await page.locator('#tree-ut').selectOption('7');
-  await page.getByRole('button', { name: 'Show vehicles' }).click();
+  await page.getByRole('button', { name: 'Find vehicles' }).click();
 
   await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
   await expect(page.getByRole('cell', { name: '320d xDrive' })).toBeVisible();
@@ -64,7 +64,7 @@ test('loads the structured search tree and lists vehicles', async ({ page }) => 
 
 test('runs fuzzy text search with optional criteria', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+  await page.getByRole('button', { name: 'Description search' }).click();
   await page.locator('#fuzzy-text').fill('BMW diesel automatic');
   await page.locator('#fuzzy-hst').fill('BMW');
   await page.getByRole('option', { name: 'BMW (130)' }).click();
@@ -76,7 +76,7 @@ test('runs fuzzy text search with optional criteria', async ({ page }) => {
 
 test('clears the fuzzy search and all filters', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+  await page.getByRole('button', { name: 'Description search' }).click();
   await page.locator('#fuzzy-text').fill('BMW diesel automatic');
   await page.locator('#fuzzy-fza').selectOption('1');
   await page.locator('#fuzzy-hst').fill('BMW');
@@ -110,7 +110,7 @@ test('pages fuzzy results without loading the complete result set', async ({ pag
   });
 
   await page.goto('/');
-  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+  await page.getByRole('button', { name: 'Description search' }).click();
   await page.locator('#fuzzy-text').fill('Dacia');
   await page.getByRole('button', { name: 'Find vehicles' }).click();
 
@@ -151,7 +151,7 @@ test('drops the pager when the criteria change', async ({ page }) => {
   await page.route('**/datecode2s/count*', (route) => route.fulfill({ json: { count: 7664 } }));
   await page.goto('/');
   await page.locator('#tree-fza').selectOption('1');
-  await page.getByRole('button', { name: 'Show vehicles' }).click();
+  await page.getByRole('button', { name: 'Find vehicles' }).click();
   await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Result pages' })).toBeVisible();
 
@@ -167,7 +167,7 @@ test('keeps the table head on the table at every width', async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     await page.locator('#tree-fza').selectOption('1');
-    await page.getByRole('button', { name: 'Show vehicles' }).click();
+    await page.getByRole('button', { name: 'Find vehicles' }).click();
     await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
 
     // An overflow on any ancestor makes it the sticky scroll container, and the
@@ -194,7 +194,7 @@ test('keeps the table head on the table at every width', async ({ page }) => {
 
 test('keeps the submit button filled when gruim styles load', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+  await page.getByRole('button', { name: 'Description search' }).click();
   await page.locator('#fuzzy-text').fill('BMW diesel automatic');
 
   // The gruim remote injects Tailwind's preflight into this document. Its
@@ -210,7 +210,7 @@ test('keeps the submit button filled when gruim styles load', async ({ page }) =
 
 test('keeps the search icon clear of the text when gruim styles load', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+  await page.getByRole('button', { name: 'Description search' }).click();
 
   // gruim ships its own copy of the same utilities. A later .px-3.5 ties with
   // .search-field and would pull the text back under the magnifier.
