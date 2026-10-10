@@ -35,7 +35,10 @@ test.beforeEach(async ({ page }) => {
     if (url.pathname === '/modelRanges') return json([{ OTG: '3', OTGB: '3' }]);
     if (url.pathname === '/modelGroups') return json([{ HT: '42', HTB: '3er (G20)' }]);
     if (url.pathname === '/models') return json([{ UT: '7', UTB: '320d xDrive' }]);
-    if (url.pathname === '/dsearchtrees/datecode2s/fuzzy/BMW%20diesel%20automatic') return json([vehicle]);
+    if (url.pathname === '/dsearchtrees/datecode2s/fuzzy/BMW%20diesel%20automatic') {
+      const filter = JSON.parse(url.searchParams.get('filter') || '{}');
+      return json(filter.limit === 1 ? [] : [vehicle]);
+    }
     if (url.pathname === '/brandsByVehicleType') return json([{ FZA: '1', HST: '130', HSTB: 'BMW' }]);
     if (url.pathname === '/modelRangeByVehicleTypeAndManufacturer') return json([{ OTG: '3', OTGB: '3' }]);
     if (url.pathname === '/modelGroupByVehicleTypeAndManufacturerAndModelRange') return json([{ HT: '42', HTB: '3er (G20)' }]);
@@ -69,6 +72,40 @@ test('runs fuzzy text search with optional criteria', async ({ page }) => {
 
   await expect(page.getByRole('cell', { name: 'BMW' })).toBeVisible();
   await expect(page.getByText('1 vehicle', { exact: false })).toBeVisible();
+});
+
+test('pages fuzzy results without loading the complete result set', async ({ page }) => {
+  await page.route('**/dsearchtrees/datecode2s/fuzzy/Dacia*', async (route) => {
+    const url = new URL(route.request().url());
+    const filter = JSON.parse(url.searchParams.get('filter') || '{}');
+    const start = filter.skip || 0;
+    const count = filter.limit === 1
+      ? (start === 100 ? 1 : 0)
+      : (start === 0 ? 100 : 1);
+    await route.fulfill({
+      json: Array.from({ length: count }, (_, index) => ({
+        ...vehicle,
+        hstb: 'Dacia',
+        dateCode: String(start + index + 1).padStart(15, '0'),
+      })),
+    });
+  });
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+  await page.locator('#fuzzy-text').fill('Dacia');
+  await page.getByRole('button', { name: 'Find vehicles' }).click();
+
+  await expect(page.getByText('Vehicles 1–100')).toBeVisible();
+  const nextRequest = page.waitForRequest((request) => {
+    if (!request.url().includes('/fuzzy/Dacia')) return false;
+    const filter = JSON.parse(new URL(request.url()).searchParams.get('filter') || '{}');
+    return filter.skip === 100 && filter.limit === 100;
+  });
+  await page.getByRole('button', { name: 'Next' }).click();
+  await nextRequest;
+  await expect(page.getByText('Vehicles 101–101')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
 });
 
 test('resets the dependent selects to their placeholder', async ({ page }) => {

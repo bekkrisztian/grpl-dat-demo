@@ -164,19 +164,36 @@ const byLabel = (left: Vehicle, right: Vehicle) =>
   || (left.htb ?? "").localeCompare(right.htb ?? "")
   || (left.utb ?? "").localeCompare(right.utb ?? "");
 
-export const fuzzySearchVehicles = async (text: string, criteria: Criteria, limit = 100) => {
+export type FuzzyPage = { vehicles: Vehicle[]; hasNext: boolean };
+
+export const fuzzySearchVehicles = async (
+  text: string,
+  criteria: Criteria,
+  offset = 0,
+  limit = PAGE_SIZE,
+): Promise<FuzzyPage> => {
   type FuzzyResult = Vehicle | { item: Vehicle; score?: number };
-  // Bound fuzzy results to protect the API heap.
-  const rows = await request<FuzzyResult[]>(
-    `/dsearchtrees/datecode2s/fuzzy/${encodeURIComponent(text.trim())}`,
-    { useGlobalSearch: true, filter: { where: whereFromCriteria(criteria), limit: limit * 5 } },
-  );
-  const selected = whereFromCriteria(criteria);
-  return rows
+  const path = `/dsearchtrees/datecode2s/fuzzy/${encodeURIComponent(text.trim())}`;
+  const where = whereFromCriteria(criteria);
+  const order = ["hstb ASC", "htb ASC", "utb ASC"];
+  // The generated fuzzy endpoint caps every response at 100, so detect the
+  // next page with a one-row lookahead instead of requesting PAGE_SIZE + 1.
+  const [rows, lookahead] = await Promise.all([
+    request<FuzzyResult[]>(path, {
+      useGlobalSearch: true,
+      filter: { where, order, limit, skip: offset },
+    }),
+    request<FuzzyResult[]>(path, {
+      useGlobalSearch: true,
+      filter: { where, order, limit: 1, skip: offset + limit },
+    }),
+  ]);
+  const selected = where;
+  const vehicles = rows
     .map((row) => "item" in row ? row.item : row)
     .filter((vehicle) => Object.entries(selected).every(([key, value]) =>
       String(vehicle[key as keyof Vehicle] ?? "") === String(value),
     ))
-    .sort(byLabel)
-    .slice(0, limit);
+    .sort(byLabel);
+  return { vehicles, hasNext: lookahead.length > 0 };
 };

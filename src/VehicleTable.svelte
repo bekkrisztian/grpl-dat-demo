@@ -6,6 +6,8 @@
   export let total = 0;
   // Index of the first row on this page, so the summary can say where we are.
   export let offset = 0;
+  // True when the caller deliberately fetched one extra row to detect another page.
+  export let hasMore = false;
 
   const count = (value: number) => value.toLocaleString("en-US");
 </script>
@@ -15,6 +17,8 @@
     {#if total > vehicles.length}
       <span class="font-semibold text-app-ink">{count(offset + 1)}–{count(offset + vehicles.length)}</span>
       of <span class="font-semibold text-app-ink">{count(total)}</span> vehicles
+    {:else if offset > 0 || hasMore}
+      Vehicles <span class="font-semibold text-app-ink">{count(offset + 1)}–{count(offset + vehicles.length)}</span>
     {:else}
       <span class="font-semibold text-app-ink">{count(vehicles.length)}</span>
       vehicle{vehicles.length === 1 ? "" : "s"}

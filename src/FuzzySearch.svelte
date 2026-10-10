@@ -3,7 +3,7 @@
   import SearchableFilter from "./SearchableFilter.svelte";
   import VehicleTable from "./VehicleTable.svelte";
   import {
-    emptyCriteria, fuzzySearchVehicles, errorMessage as message,
+    emptyCriteria, fuzzySearchVehicles, PAGE_SIZE, errorMessage as message,
     searchBrands, searchModelGroups, searchModelRanges, searchModels,
     type Option, type Vehicle,
   } from "./api";
@@ -15,14 +15,33 @@
   let fuzzyText = "";
   let fuzzyLoading = "";
   let fuzzyResults: Vehicle[] = [];
+  let fuzzyPage = 1;
+  let fuzzyHasNext = false;
   let fuzzySearched = false;
   let fuzzyError = "";
 
   const runFuzzySearch = async () => {
     if (!fuzzyText.trim()) return;
+    fuzzyPage = 1;
+    await loadFuzzyPage(1);
+  };
+
+  const loadFuzzyPage = async (page: number) => {
     fuzzyLoading = "results"; fuzzyError = ""; fuzzySearched = true;
-    try { fuzzyResults = await fuzzySearchVehicles(fuzzyText, fuzzyCriteria); } catch (error) { fuzzyError = message(error); fuzzyResults = []; }
+    try {
+      const result = await fuzzySearchVehicles(fuzzyText, fuzzyCriteria, (page - 1) * PAGE_SIZE);
+      fuzzyResults = result.vehicles;
+      fuzzyHasNext = result.hasNext;
+      fuzzyPage = page;
+    } catch (error) {
+      fuzzyError = message(error); fuzzyResults = []; fuzzyHasNext = false;
+    }
     finally { fuzzyLoading = ""; }
+  };
+
+  const goToFuzzyPage = (page: number) => {
+    if (page < 1 || page === fuzzyPage || fuzzyLoading) return;
+    return loadFuzzyPage(page);
   };
 </script>
 
@@ -62,7 +81,17 @@
       {#if fuzzySearched && !fuzzyLoading && !fuzzyResults.length && !fuzzyError}
         <p class="rounded-2xl border border-dashed border-app-line bg-app-surface/60 p-10 text-center text-app-muted">No vehicles match that description.</p>
       {/if}
-      <VehicleTable vehicles={fuzzyResults} />
+      <VehicleTable
+        vehicles={fuzzyResults}
+        offset={(fuzzyPage - 1) * PAGE_SIZE}
+        hasMore={fuzzyHasNext}
+      />
+      {#if fuzzyResults.length && (fuzzyPage > 1 || fuzzyHasNext)}
+        <nav class="mt-4 flex items-center justify-between gap-4" aria-label="Fuzzy result pages">
+          <button class="rounded-xl border border-app-line bg-app-surface px-4 py-2 text-sm font-semibold text-app-ink shadow-sm transition hover:border-app-line-strong disabled:cursor-not-allowed disabled:text-app-muted/50 disabled:shadow-none" disabled={fuzzyPage === 1 || !!fuzzyLoading} on:click={() => goToFuzzyPage(fuzzyPage - 1)}>Previous</button>
+          <span class="text-sm text-app-muted">Page <span class="font-semibold text-app-ink">{fuzzyPage.toLocaleString("en-US")}</span></span>
+          <button class="rounded-xl border border-app-line bg-app-surface px-4 py-2 text-sm font-semibold text-app-ink shadow-sm transition hover:border-app-line-strong disabled:cursor-not-allowed disabled:text-app-muted/50 disabled:shadow-none" disabled={!fuzzyHasNext || !!fuzzyLoading} on:click={() => goToFuzzyPage(fuzzyPage + 1)}>Next</button>
+        </nav>
+      {/if}
     </div>
   </section>
-
