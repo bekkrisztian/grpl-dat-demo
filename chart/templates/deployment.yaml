@@ -28,7 +28,6 @@ spec:
       serviceAccountName: {{ include "myapp.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if not .Values.DEV }}
       initContainers:
         - name: {{ .Chart.Name }}-init
           image: "nicolaka/netshoot"
@@ -51,16 +50,11 @@ spec:
               echo "wait for grapple resource to become available"
               export SVELTE_APP_REMOTE_URL=$(echo "${SVELTE_APP_REMOTE_URL:-${REMOTE_ENTRY_URL}}" | sed "s,/remoteEntry.js,,g")
               echo "testing: curl -k -Is ${SVELTE_APP_REMOTE_URL}/dashboard.json | head -1"
-              attempt=0
-              until curl -k -Is "${SVELTE_APP_REMOTE_URL}/dashboard.json" 2>/dev/null | head -1 | grep -q 200; do
-                attempt=$((attempt + 1))
-                if [ "$attempt" -ge 120 ]; then
-                  echo "ERROR: could not reach ${SVELTE_APP_REMOTE_URL}/dashboard.json after 10 minutes"
-                  exit 1
-                fi
-                sleep 5
-              done
-      {{- end }}
+              # timeout 600 sh -c "while ! curl -k -Is ${SVELTE_APP_REMOTE_URL}/dashboard.json 2>/dev/null | head -1 | grep 200; do sleep 1; echo -n '.'; done" || echo "\n\nERROR: could not reach: ${SVELTE_APP_REMOTE_URL}/dashboard.json after 10 minutes"
+              while ! curl -k -Is ${SVELTE_APP_REMOTE_URL}/dashboard.json 2>/dev/null | head -1 | grep 200; do
+                  sleep 1
+                  echo -n '.'
+              done || echo "\n\nERROR: could not reach: ${SVELTE_APP_REMOTE_URL}/dashboard.json after 10 minutes"
   
       containers:
         - name: {{ .Chart.Name }}

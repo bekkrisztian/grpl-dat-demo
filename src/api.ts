@@ -55,6 +55,9 @@ const compact = <T extends Option>(items: T[]) => items.filter(
   (item, index, all) => item.value && all.findIndex((candidate) => candidate.value === item.value) === index,
 );
 
+export const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "The DAT API request failed.";
+
 export const emptyCriteria = (): Criteria => ({ fza: "", hst: "", otg: "", ht: "", ut: "" });
 
 // Fallback for grapi's parameterless SQL controller issue.

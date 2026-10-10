@@ -134,3 +134,32 @@ test('keeps the table head on the table at every width', async ({ page }) => {
     expect(after.overflows, `page scrolls sideways at ${width}px`).toBe(false);
   }
 });
+
+test('keeps the submit button filled when gruim styles load', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+  await page.locator('#fuzzy-text').fill('BMW diesel automatic');
+
+  // The gruim remote injects Tailwind's preflight into this document. Its
+  // [type='submit'] rule ties with a utility class and wins on load order.
+  await page.addStyleTag({
+    content: "button,[type='button'],[type='reset'],[type='submit']{background-color:transparent;background-image:none}",
+  });
+
+  const filled = await page.getByRole('button', { name: 'Find vehicles' })
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(filled).not.toBe('rgba(0, 0, 0, 0)');
+});
+
+test('keeps the search icon clear of the text when gruim styles load', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Fuzzy search' }).click();
+
+  // gruim ships its own copy of the same utilities. A later .px-3.5 ties with
+  // .search-field and would pull the text back under the magnifier.
+  await page.addStyleTag({ content: '.px-3\\.5{padding-left:0.875rem;padding-right:0.875rem}' });
+
+  const padding = await page.locator('#fuzzy-hst')
+    .evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
+  expect(padding).toBeGreaterThan(30);
+});

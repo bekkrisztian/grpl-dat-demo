@@ -78,7 +78,7 @@
       on:input={search}
       on:focus={() => options.length && (open = true)}
       on:blur={closeLater}
-      class="w-full rounded-xl border border-app-line bg-app-surface px-3.5 py-2.5 text-sm text-app-ink shadow-sm outline-none transition placeholder:text-app-muted/60 hover:border-app-line-strong focus-visible:border-app-accent focus-visible:ring-4 focus-visible:ring-app-accent/15"
+      class="search-field w-full rounded-xl border border-app-line bg-app-surface px-3.5 py-2.5 text-sm text-app-ink shadow-sm outline-none transition placeholder:text-app-muted/60 hover:border-app-line-strong focus-visible:border-app-accent focus-visible:ring-4 focus-visible:ring-app-accent/15"
     />
   </label>
   {#if loading}<p class="mt-1 text-xs text-app-muted">Searching…</p>{/if}

@@ -153,9 +153,9 @@ The UI asks for one page at a time. A single vehicle type matches 152,070 rows,
 so the result table pages at 100 and shows the true total beside the range.
 
 gruim's "Select all" and its two export buttons each sent one request with no
-limit. `grases/gras/gruim/prepatches/page-bulk-fetches.sh` rewrites them to walk
-the table in pages. It stops at the safety ceiling and warns that the user must
-narrow the filter to process the remaining records:
+limit. `grases/gras/gruim/prepatches/page-bulk-fetches.sh` rewrites full-record
+exports to walk the table in pages. They stop at the safety ceiling and warn
+that the user must narrow the filter to process the remaining records:
 
 | key in `config.global` | default |
 | --- | --- |
@@ -163,9 +163,12 @@ narrow the filter to process the remaining records:
 | `max-records` | 5000 |
 
 The `z-datecode-primary-key.sh` prepatch maps the table's `dateCode` primary key
-to the `id` expected by gruim actions. It also makes the edit form use
-`dateCode` in its request path and excludes the MySQL-generated `globalSearch`
-column from PATCH payloads.
+to the `id` expected by gruim actions. "Select all" fetches only these IDs in
+pages, so it can select the complete filtered result without materialising all
+records in grapi. A progress bar shows the loaded and total ID count while this
+runs, and a `Set` keeps checkbox lookups fast with hundreds of thousands of
+selected IDs. The patch also makes the edit form use `dateCode` in its request
+path and excludes the MySQL-generated `globalSearch` column from PATCH payloads.
 
 `task patch-values-file` encodes these prepatches for deployment, while
 `task patch-values-file-patches-only` does the same for `devspace dev`. The

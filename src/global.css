@@ -2,11 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* One palette, defined once. Dark mode redefines the same names, so every
-   component can stay colour-agnostic. */
 :root {
-  /* Height of the sticky page header, so a sticky table head can sit under it
-     instead of needing a scroll container of its own. */
   --app-header-h: 75px;
   color-scheme: light;
   --dat-bg: 248 250 252;
@@ -34,10 +30,10 @@
     --dat-line-strong: 51 65 85;
     --dat-ink: 241 245 249;
     --dat-muted: 148 163 184;
-    --dat-accent: 129 140 248;
-    --dat-accent-hover: 165 180 252;
+    --dat-accent: 79 70 229;
+    --dat-accent-hover: 99 102 241;
     --dat-accent-soft: 30 41 59;
-    --dat-accent-ink: 2 6 23;
+    --dat-accent-ink: 255 255 255;
     --dat-danger: 251 113 133;
     --dat-danger-soft: 42 14 24;
   }
@@ -53,8 +49,6 @@ body {
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
-/* Native selects keep their own arrow in every browser; replace it so the
-   control matches the rest of the form. */
 select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
@@ -64,11 +58,31 @@ select {
   padding-right: 2.25rem;
 }
 
+.btn-accent {
+  background-color: rgb(var(--dat-accent)) !important;
+  color: rgb(var(--dat-accent-ink)) !important;
+}
+
+.btn-accent:hover:not(:disabled) {
+  background-color: rgb(var(--dat-accent-hover)) !important;
+}
+
+.btn-accent:disabled {
+  background-color: rgb(var(--dat-sunken)) !important;
+  color: rgb(var(--dat-muted)) !important;
+}
+
+.search-field {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%2364748b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='9' r='5.5'/%3E%3Cpath d='M13 13l4 4'/%3E%3C/svg%3E");
+  background-position: left 0.7rem center;
+  background-repeat: no-repeat;
+  background-size: 1.1rem;
+  padding-left: 2.25rem !important;
+}
+
 .scrollarea {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--dat-line-strong)) transparent;
-  /* Reserve the track, so the sticky header ends where the bar begins instead
-     of running under it. */
   scrollbar-gutter: stable;
 }
 .scrollarea::-webkit-scrollbar {
