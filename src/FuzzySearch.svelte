@@ -3,7 +3,7 @@
   import SearchableFilter from "./SearchableFilter.svelte";
   import VehicleTable from "./VehicleTable.svelte";
   import {
-    emptyCriteria, fuzzySearchVehicles, PAGE_SIZE, errorMessage as message,
+    countFuzzyVehicles, emptyCriteria, fuzzySearchVehicles, PAGE_SIZE, errorMessage as message,
     searchBrands, searchModelGroups, searchModelRanges, searchModels,
     type Option, type Vehicle,
   } from "./api";
@@ -16,6 +16,7 @@
   let fuzzyLoading = "";
   let fuzzyResults: Vehicle[] = [];
   let fuzzyPage = 1;
+  let fuzzyTotal = 0;
   let fuzzyHasNext = false;
   let fuzzySearched = false;
   let fuzzyError = "";
@@ -23,18 +24,22 @@
   const runFuzzySearch = async () => {
     if (!fuzzyText.trim()) return;
     fuzzyPage = 1;
-    await loadFuzzyPage(1);
+    await loadFuzzyPage(1, true);
   };
 
-  const loadFuzzyPage = async (page: number) => {
+  const loadFuzzyPage = async (page: number, refreshTotal = false) => {
     fuzzyLoading = "results"; fuzzyError = ""; fuzzySearched = true;
     try {
-      const result = await fuzzySearchVehicles(fuzzyText, fuzzyCriteria, (page - 1) * PAGE_SIZE);
-      fuzzyResults = result.vehicles;
-      fuzzyHasNext = result.hasNext;
+      const [vehicles, total] = await Promise.all([
+        fuzzySearchVehicles(fuzzyText, fuzzyCriteria, (page - 1) * PAGE_SIZE),
+        refreshTotal ? countFuzzyVehicles(fuzzyText, fuzzyCriteria) : Promise.resolve(fuzzyTotal),
+      ]);
+      fuzzyResults = vehicles;
+      fuzzyTotal = total;
+      fuzzyHasNext = page * PAGE_SIZE < total;
       fuzzyPage = page;
     } catch (error) {
-      fuzzyError = message(error); fuzzyResults = []; fuzzyHasNext = false;
+      fuzzyError = message(error); fuzzyResults = []; fuzzyHasNext = false; fuzzyTotal = 0;
     }
     finally { fuzzyLoading = ""; }
   };
@@ -83,13 +88,13 @@
       {/if}
       <VehicleTable
         vehicles={fuzzyResults}
+        total={fuzzyTotal}
         offset={(fuzzyPage - 1) * PAGE_SIZE}
-        hasMore={fuzzyHasNext}
       />
       {#if fuzzyResults.length && (fuzzyPage > 1 || fuzzyHasNext)}
         <nav class="mt-4 flex items-center justify-between gap-4" aria-label="Fuzzy result pages">
           <button class="rounded-xl border border-app-line bg-app-surface px-4 py-2 text-sm font-semibold text-app-ink shadow-sm transition hover:border-app-line-strong disabled:cursor-not-allowed disabled:text-app-muted/50 disabled:shadow-none" disabled={fuzzyPage === 1 || !!fuzzyLoading} on:click={() => goToFuzzyPage(fuzzyPage - 1)}>Previous</button>
-          <span class="text-sm text-app-muted">Page <span class="font-semibold text-app-ink">{fuzzyPage.toLocaleString("en-US")}</span></span>
+          <span class="text-sm text-app-muted">Page <span class="font-semibold text-app-ink">{fuzzyPage.toLocaleString("en-US")}</span> of <span class="font-semibold text-app-ink">{Math.ceil(fuzzyTotal / PAGE_SIZE).toLocaleString("en-US")}</span></span>
           <button class="rounded-xl border border-app-line bg-app-surface px-4 py-2 text-sm font-semibold text-app-ink shadow-sm transition hover:border-app-line-strong disabled:cursor-not-allowed disabled:text-app-muted/50 disabled:shadow-none" disabled={!fuzzyHasNext || !!fuzzyLoading} on:click={() => goToFuzzyPage(fuzzyPage + 1)}>Next</button>
         </nav>
       {/if}

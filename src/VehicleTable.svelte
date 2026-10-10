@@ -2,7 +2,7 @@
   import type { Vehicle } from "./api";
 
   export let vehicles: Vehicle[] = [];
-  // Rows that match but are not on this page; 0 when the caller has no count.
+  // Total rows matching the current search; 0 when the caller has no count.
   export let total = 0;
   // Index of the first row on this page, so the summary can say where we are.
   export let offset = 0;

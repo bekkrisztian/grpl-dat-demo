@@ -75,13 +75,12 @@ test('runs fuzzy text search with optional criteria', async ({ page }) => {
 });
 
 test('pages fuzzy results without loading the complete result set', async ({ page }) => {
+  await page.route('**/datecode2s/count*', (route) => route.fulfill({ json: { count: 101 } }));
   await page.route('**/dsearchtrees/datecode2s/fuzzy/Dacia*', async (route) => {
     const url = new URL(route.request().url());
     const filter = JSON.parse(url.searchParams.get('filter') || '{}');
     const start = filter.skip || 0;
-    const count = filter.limit === 1
-      ? (start === 100 ? 1 : 0)
-      : (start === 0 ? 100 : 1);
+    const count = start === 0 ? 100 : 1;
     await route.fulfill({
       json: Array.from({ length: count }, (_, index) => ({
         ...vehicle,
@@ -96,7 +95,8 @@ test('pages fuzzy results without loading the complete result set', async ({ pag
   await page.locator('#fuzzy-text').fill('Dacia');
   await page.getByRole('button', { name: 'Find vehicles' }).click();
 
-  await expect(page.getByText('Vehicles 1–100')).toBeVisible();
+  await expect(page.getByText('1–100 of 101 vehicles')).toBeVisible();
+  await expect(page.getByText('Page 1 of 2')).toBeVisible();
   const nextRequest = page.waitForRequest((request) => {
     if (!request.url().includes('/fuzzy/Dacia')) return false;
     const filter = JSON.parse(new URL(request.url()).searchParams.get('filter') || '{}');
@@ -104,7 +104,8 @@ test('pages fuzzy results without loading the complete result set', async ({ pag
   });
   await page.getByRole('button', { name: 'Next' }).click();
   await nextRequest;
-  await expect(page.getByText('Vehicles 101–101')).toBeVisible();
+  await expect(page.getByText('101–101 of 101 vehicles')).toBeVisible();
+  await expect(page.getByText('Page 2 of 2')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled();
 });
 

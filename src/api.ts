@@ -149,6 +149,24 @@ export const countVehicles = async (criteria: Criteria) => {
   return result.count;
 };
 
+const fuzzyWhere = (text: string, criteria: Criteria) => {
+  const selected = whereFromCriteria(criteria);
+  const search = {
+    or: text.trim().split(/\s+/).filter(Boolean).map((term) => ({
+      globalSearch: { like: `%${term}%` },
+    })),
+  };
+
+  return Object.keys(selected).length ? { and: [selected, search] } : search;
+};
+
+export const countFuzzyVehicles = async (text: string, criteria: Criteria) => {
+  const result = await request<{ count: number }>("/datecode2s/count", {
+    where: fuzzyWhere(text, criteria),
+  });
+  return result.count;
+};
+
 export const findVehicles = (criteria: Criteria, offset = 0, limit = PAGE_SIZE) =>
   request<Vehicle[]>("/datecode2s", {
     filter: {
@@ -164,30 +182,20 @@ const byLabel = (left: Vehicle, right: Vehicle) =>
   || (left.htb ?? "").localeCompare(right.htb ?? "")
   || (left.utb ?? "").localeCompare(right.utb ?? "");
 
-export type FuzzyPage = { vehicles: Vehicle[]; hasNext: boolean };
-
 export const fuzzySearchVehicles = async (
   text: string,
   criteria: Criteria,
   offset = 0,
   limit = PAGE_SIZE,
-): Promise<FuzzyPage> => {
+): Promise<Vehicle[]> => {
   type FuzzyResult = Vehicle | { item: Vehicle; score?: number };
   const path = `/dsearchtrees/datecode2s/fuzzy/${encodeURIComponent(text.trim())}`;
   const where = whereFromCriteria(criteria);
   const order = ["hstb ASC", "htb ASC", "utb ASC"];
-  // The generated fuzzy endpoint caps every response at 100, so detect the
-  // next page with a one-row lookahead instead of requesting PAGE_SIZE + 1.
-  const [rows, lookahead] = await Promise.all([
-    request<FuzzyResult[]>(path, {
-      useGlobalSearch: true,
-      filter: { where, order, limit, skip: offset },
-    }),
-    request<FuzzyResult[]>(path, {
-      useGlobalSearch: true,
-      filter: { where, order, limit: 1, skip: offset + limit },
-    }),
-  ]);
+  const rows = await request<FuzzyResult[]>(path, {
+    useGlobalSearch: true,
+    filter: { where, order, limit, skip: offset },
+  });
   const selected = where;
   const vehicles = rows
     .map((row) => "item" in row ? row.item : row)
@@ -195,5 +203,5 @@ export const fuzzySearchVehicles = async (
       String(vehicle[key as keyof Vehicle] ?? "") === String(value),
     ))
     .sort(byLabel);
-  return { vehicles, hasNext: lookahead.length > 0 };
+  return vehicles;
 };
