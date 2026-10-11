@@ -1,0 +1,29 @@
+apiVersion: apps.kubeblocks.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Release.Name }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  clusterDef: redis
+  topology: standalone
+  terminationPolicy: Delete
+  componentSpecs:
+    - name: redis
+      serviceVersion: 7.0.6
+      replicas: 1
+      resources:
+        limits:
+          cpu: "0.5"
+          memory: 1Gi
+        requests:
+          cpu: "50m"
+          memory: 128Mi
+      volumeClaimTemplates:
+        - name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 5Gi

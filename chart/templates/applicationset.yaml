@@ -14,15 +14,15 @@ spec:
       {{- if $gras.grapi }}
       {{ $gras.grapi | toYaml | nindent 6 }}
       {{- end }}
+  {{- if $gras.gruim }}
   gruims:
   - name: {{ printf "%s-%s-%s" $.Release.Namespace $.Release.Name $grasName | quote }}
     spec:
       {{- if $gras.gras }}
       {{ $gras.gras | toYaml | nindent 6 }}
       {{- end }}
-      {{- if $gras.gruim }}
       {{ $gras.gruim | toYaml | nindent 6 }}
-      {{- end }}
+  {{- end }}
 ---
   {{- end }}
 {{- end }}

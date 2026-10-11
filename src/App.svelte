@@ -1,110 +1,75 @@
-<script>
-  import dayjs from "dayjs";
+<script lang="ts">
+  import { onMount } from "svelte";
+  import TreeSearch from "./TreeSearch.svelte";
+  import FuzzySearch from "./FuzzySearch.svelte";
+  import BrowseTable from "./BrowseTable.svelte";
+  import { loadVehicleTypes, errorMessage, type Option } from "./api";
 
-  // demofullclassicmodelsasas
-  let el1;
-  import("App/Employees/count").then((module) => {
-    const Count = module.default;
-    new Count({
-      target: el1,
-      props: {
-        // filter: { where:{ "postalCode":44000 } },
-        // css: "background-color: rgb(204 90 113 / var(--tw-bg-opacity));"
-        // css: "display: none;"
-      },
-    });
-  });
+  type View = "tree" | "fuzzy" | "browse";
 
-  let el2;
-  import("App/Employees/findById").then((module) => {
-    // import("App/Orders/updateById").then((module) => {
-    const FindById = module.default;
-    new FindById({
-      target: el2,
-      props: {
-        id: 1002,
-        schema: {
-          "field-properties": {
-            "field-order": [
-              "id",
-              "customerName",
-              "contactLastName",
-              "contactFirstName",
-              "postalCode",
-              "city",
-              "country",
-            ],
-            "hidden-fields": ["state", "addressLine2", "creditLimit"],
-            "date-fields": [
-              { name: "orderDate", type: "date" },
-              { name: "shippedDate", type: "time" },
-            ],
-          },
-        },
-        // dateFormat: 'DD.MM.YYYY - HH:mm',
-        // css: "color: orange;  font-weight: bold; border-color: orange; ",
-        // css: "display: none;"
-      },
-    });
-  });
+  let view: View = "tree";
+  let vehicleTypes: Option[] = [];
+  let initialLoading = true;
+  let startupError = "";
 
-  let el3;
-  import("App/Employees/find").then((module) => {
-    const Find = module.default;
-    new Find({
-      target: el3,
-      props: {
-        // filter: {"limit":10, "where":{"customersId":363}},
-        filter: { limit: 10 },
-        schema: {
-          "field-properties": {
-            "field-order": [
-              "id",
-              "customerName",
-              "contactLastName",
-              "contactFirstName",
-              "postalCode",
-              "city",
-              "country",
-            ],
-            "hidden-fields": ["state", "addressLine2", "creditLimit"],
-            "date-fields": [
-              { name: "orderDate", type: "date" },
-              { name: "shippedDate", type: "time" },
-            ],
-          },
-        },
-        translation: {
-          customerName: "Name des Kunden",
-          contactLastName: "Nachname",
-          contactFirstName: "Vorname",
-          postalCode: "PLZ",
-          city: "Ort",
-          "No more items":
-            "Es gibt keine weiteren Elemente mit diesen Kriterien",
-          "Load More": "Weitere Elemente anzeigen",
-        },
-        // dateFormat: 'DD.MM.YYYY - HH:mm',
-        // // useLocalTimezone: true,
-        enableFilter: false,
-        enableLoadMore: false,
-        // css: "color: orange;  font-weight: bold; border-color: orange; ",
-        // css: "font-size: 1vw; min-width: 8rem; padding:0.1rem; padding-left:.5rem; color: orange;  font-weight: bold; border-color: lightgray;",
-        // css: "display: none;"
-      },
-    });
+  onMount(async () => {
+    try {
+      vehicleTypes = await loadVehicleTypes();
+    } catch (error) {
+      startupError = errorMessage(error);
+    } finally {
+      initialLoading = false;
+    }
   });
 </script>
 
-<div class="max-w-6xl m-auto felx p-8">
-  <!-- <div class="text-3xl">Customers, This is from the svelte application</div> -->
+<svelte:head><title>DAT vehicle catalogue</title></svelte:head>
 
-  <div class="p-8 grid gap-3">
-    <div>
-      <!-- <h2 class="text-xl">Count</h2> -->
-      <div class="uimodule" bind:this={el1} style="width:350px;" />
-      <div class="uimodule" bind:this={el2} />
-      <div class="uimodule" bind:this={el3} />
+<main class="min-h-screen bg-app-bg text-app-ink antialiased">
+  <header class="sticky top-0 z-20 border-b border-app-line bg-app-bg shadow-sm">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-4 px-6 py-4">
+      <div class="flex items-center gap-3">
+        <span class="grid h-9 w-9 place-items-center rounded-xl bg-app-accent text-sm font-bold text-app-accent-ink">DAT</span>
+        <div class="leading-tight">
+          <h1 class="text-base font-semibold">Vehicle search</h1>
+          <p class="text-xs text-app-muted">Find and explore vehicles in the DAT catalogue</p>
+        </div>
+      </div>
+
+      <nav class="ml-auto inline-flex rounded-xl border border-app-line bg-app-surface p-1 shadow-sm" aria-label="Search modes">
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'tree' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "tree"}>Guided search</button>
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'fuzzy' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "fuzzy"}>Description search</button>
+        <button
+          class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'browse' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
+          on:click={() => view = "browse"}>All vehicles</button>
+      </nav>
     </div>
+  </header>
+
+  <div class="mx-auto max-w-7xl px-6 py-10">
+    {#if startupError}
+      <div role="alert" class="mb-8 flex items-start gap-3 rounded-xl border border-app-danger/30 bg-app-danger-soft px-4 py-3 text-sm text-app-danger">
+        <span class="mt-0.5 font-semibold">Vehicle data is unavailable</span>
+        <span class="text-app-danger/80">{startupError}</span>
+      </div>
+    {/if}
+
+    {#if view === "tree"}
+      <TreeSearch {vehicleTypes} {initialLoading} />
+    {:else if view === "fuzzy"}
+      <FuzzySearch {vehicleTypes} {initialLoading} />
+    {:else}
+      <section aria-labelledby="browse-title">
+        <div class="mb-7 max-w-2xl">
+          <h2 id="browse-title" class="text-3xl font-bold tracking-tight">Vehicle catalogue</h2>
+          <p class="mt-2 text-app-muted">Browse, filter and manage all available DAT vehicle records.</p>
+        </div>
+        <BrowseTable />
+      </section>
+    {/if}
   </div>
-</div>
+</main>
