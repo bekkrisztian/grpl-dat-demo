@@ -89,10 +89,10 @@
       <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <div><FilterSelect id="fuzzy-fza" label="Vehicle type" code="FZA" bind:value={fuzzyCriteria.fza} options={vehicleTypes} loading={initialLoading} optional /></div>
         {#key fuzzyFiltersKey}
-          <SearchableFilter id="fuzzy-hst" label="Manufacturer" code="HST" bind:value={fuzzyCriteria.hst} loadOptions={searchBrands} />
-          <SearchableFilter id="fuzzy-otg" label="Model range" code="OTG" bind:value={fuzzyCriteria.otg} loadOptions={searchModelRanges} />
-          <SearchableFilter id="fuzzy-ht" label="Model group" code="HT" bind:value={fuzzyCriteria.ht} loadOptions={searchModelGroups} />
-          <SearchableFilter id="fuzzy-ut" label="Model" code="UT" bind:value={fuzzyCriteria.ut} loadOptions={searchModels} />
+          <SearchableFilter id="fuzzy-hst" label="Manufacturer" code="HST" bind:value={fuzzyCriteria.hst} bind:selectedLabel={fuzzyCriteria.hstb} loadOptions={searchBrands} />
+          <SearchableFilter id="fuzzy-otg" label="Model range" code="OTG" bind:value={fuzzyCriteria.otg} bind:selectedLabel={fuzzyCriteria.otgb} loadOptions={searchModelRanges} />
+          <SearchableFilter id="fuzzy-ht" label="Model group" code="HT" bind:value={fuzzyCriteria.ht} bind:selectedLabel={fuzzyCriteria.htb} loadOptions={searchModelGroups} />
+          <SearchableFilter id="fuzzy-ut" label="Model" code="UT" bind:value={fuzzyCriteria.ut} bind:selectedLabel={fuzzyCriteria.utb} loadOptions={searchModels} />
         {/key}
       </div>
 

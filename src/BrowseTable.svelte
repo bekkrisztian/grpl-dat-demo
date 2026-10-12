@@ -8,11 +8,17 @@
 
   // Model property names, not labels.
   const schema = {
+    // datecode2 keys on dateCode, and holds more rows than one request can carry.
+    "primary-key": "dateCode",
+    "bulk-page-size": 1000,
     "field-properties": {
       "field-order": [
         "dateCode", "fzab", "hstb", "otgb", "htb", "utb",
         "avMoB", "ccm", "kw", "antr", "ab",
       ],
+      // globalSearch is an index column the API maintains, so it is never sent
+      // back on a save.
+      "auto-generated-fields": ["globalSearch"],
       // Numeric codes repeat the label beside them; globalSearch is an index.
       "hidden-fields": [
         "fza", "hst", "ht", "ut", "otg", "avMo", "avKa", "avGe",
