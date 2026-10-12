@@ -131,9 +131,9 @@ Fuzzy search uses `/dsearchtrees/datecode2s/fuzzy/{searchTerm}` on layer one and
 `/dsearchtree/dsearchtrees/datecode2s/fuzzy/{searchTerm}` through the cache
 prefix. Its configuration must include `databaseName: dsearchtree`; otherwise
 the generated controller produces the invalid table name `.datecode2`. The
-`bound-fuzzy-search` postpatch routes the query through the repository so the
-criteria, limit and offset are applied instead of running an unbounded raw
-query. The UI pages fuzzy results at 100 rows and runs a matching count query
+The client sends the search terms in the repository filter and disables the
+unbounded raw query, so the criteria, limit and offset are applied. The UI
+pages fuzzy results at 100 rows and runs a matching count query
 once per search, so both the current range and the total number of results are
 shown without loading the complete result set.
 

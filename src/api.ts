@@ -192,13 +192,13 @@ export const fuzzySearchVehicles = async (
 ): Promise<Vehicle[]> => {
   type FuzzyResult = Vehicle | { item: Vehicle; score?: number };
   const path = `/dsearchtrees/datecode2s/fuzzy/${encodeURIComponent(text.trim())}`;
-  const where = whereFromCriteria(criteria);
+  const where = fuzzyWhere(text, criteria);
   const order = ["hstb ASC", "htb ASC", "utb ASC"];
   const rows = await request<FuzzyResult[]>(path, {
-    useGlobalSearch: true,
+    useGlobalSearch: false,
     filter: { where, order, limit, skip: offset },
   });
-  const selected = where;
+  const selected = whereFromCriteria(criteria);
   const vehicles = rows
     .map((row) => "item" in row ? row.item : row)
     .filter((vehicle) => Object.entries(selected).every(([key, value]) =>

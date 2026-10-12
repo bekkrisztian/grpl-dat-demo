@@ -12,7 +12,7 @@ grases:
       name: dat-demo
       runimages:
         image: grpl/loopback
-        tag: "0.4.25"
+        tag: "0.4.28.pr-460"
       discoveredrepos: true
       ingress: true
       ssl: true
@@ -142,7 +142,7 @@ grases:
       name: dat-demo
       runimages:
         image: grpl/gruim
-        tag: "0.3.62"
+        tag: "0.3.64.pr-197"
       ssl: true
       sslissuer: letsencrypt-grapple-demo
       autoscaling:
@@ -160,7 +160,7 @@ grases:
       name: dat-demo-cache
       runimages:
         image: grpl/loopback
-        tag: "0.4.25"
+        tag: "0.4.28.pr-460"
       discoveredrepos: false
       ingress: true
       ssl: true
