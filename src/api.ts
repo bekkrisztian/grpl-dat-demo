@@ -25,9 +25,13 @@ export type Option = { value: string; label: string };
 export type Criteria = {
   fza: string;
   hst: string;
+  hstb: string;
   otg: string;
+  otgb: string;
   ht: string;
+  htb: string;
   ut: string;
+  utb: string;
 };
 
 // Use layer one for SQL options because the cached client drops sqlParams.
@@ -52,13 +56,17 @@ const request = async <T>(path: string, query: Record<string, unknown> = {}, bas
 };
 
 const compact = <T extends Option>(items: T[]) => items.filter(
-  (item, index, all) => item.value && all.findIndex((candidate) => candidate.value === item.value) === index,
+  (item, index, all) => item.value && all.findIndex(
+    (candidate) => candidate.value === item.value && candidate.label === item.label,
+  ) === index,
 );
 
 export const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : "Could not load vehicle data.";
 
-export const emptyCriteria = (): Criteria => ({ fza: "", hst: "", otg: "", ht: "", ut: "" });
+export const emptyCriteria = (): Criteria => ({
+  fza: "", hst: "", hstb: "", otg: "", otgb: "", ht: "", htb: "", ut: "", utb: "",
+});
 
 // Fallback for grapi's parameterless SQL controller issue.
 const KNOWN_VEHICLE_TYPES: Option[] = [
@@ -138,7 +146,7 @@ export const loadModels = (fza: string, hst: string, ht: string) => sqlOptions(
 const whereFromCriteria = (criteria: Criteria) => Object.fromEntries(
   Object.entries(criteria)
     .filter(([, value]) => value)
-    .map(([key, value]) => [key, key === "otg" ? value : Number(value)]),
+    .map(([key, value]) => [key, key === "otg" || key.endsWith("b") ? value : Number(value)]),
 );
 
 // Keep broad vehicle results paginated.

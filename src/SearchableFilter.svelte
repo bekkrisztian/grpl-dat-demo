@@ -5,6 +5,7 @@
   export let label: string;
   export let code = "";
   export let value = "";
+  export let selectedLabel = "";
   export let loadOptions: (query: string, signal?: AbortSignal) => Promise<Option[]>;
 
   let query = "";
@@ -21,6 +22,7 @@
 
   const search = () => {
     value = "";
+    selectedLabel = "";
     clearTimeout(timer);
     controller?.abort();
     const term = query.trim();
@@ -54,11 +56,18 @@
 
   const choose = (option: Option) => {
     value = option.value;
+    selectedLabel = option.label;
     query = text(option);
     open = false;
   };
 
-  const closeLater = () => setTimeout(() => open = false, 150);
+  const closeLater = () => setTimeout(() => {
+    open = false;
+    if (!value) {
+      query = "";
+      options = [];
+    }
+  }, 150);
 </script>
 
 <div class="relative">
