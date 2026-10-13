@@ -227,6 +227,21 @@ grases:
       prerelationpatches: []
       prepatches: []
       prediscoverypatches: []
+    gruim:
+      name: dat-demo-cache
+      runimages:
+        image: grpl/gruim
+        tag: "0.3.64.pr-197"
+      ssl: true
+      sslissuer: letsencrypt-grapple-demo
+      autoscaling:
+        maxReplicas: 1
+      style: '{"colors":{"primary":"#1451cb"}}'
+      config: '{"global":{"fetch-page-size":500,"max-records":5000}}'
+      additionalpackages: ""
+      custommodules: []
+      prepatches: []
+      postpatches: []
 replicaCount: 1
 image:
   repository: grpl/grpl-dat-demo

@@ -51,6 +51,7 @@ pipelines:
       wait-for-deployment ${APP_NAME}-gras-grapi 600
       # Cache grapi depends on layer one.
       wait-for-deployment ${APP_NAME}-grascache-grapi 600
+      wait-for-deployment ${APP_NAME}-grascache-gruim 600
       start_dev grapi &
       start_dev grapi-cache &
       start_dev gruim &

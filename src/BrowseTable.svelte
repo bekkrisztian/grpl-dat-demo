@@ -45,7 +45,7 @@
 
   onMount(async () => {
     try {
-      Admin = (await import("App/Datecode2")).default;
+      Admin = (await import("AppCache/dsearchtreeDatecode2")).default;
     } catch (cause) {
       error = cause instanceof Error ? cause.message : String(cause);
     }

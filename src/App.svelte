@@ -11,6 +11,12 @@
   let vehicleTypes: Option[] = [];
   let initialLoading = true;
   let startupError = "";
+  let browseLoaded = false;
+
+  const showBrowse = () => {
+    browseLoaded = true;
+    view = "browse";
+  };
 
   onMount(async () => {
     try {
@@ -45,7 +51,7 @@
           on:click={() => view = "fuzzy"}>Description search</button>
         <button
           class="rounded-lg px-3.5 py-1.5 text-sm font-medium transition {view === 'browse' ? 'bg-app-accent text-app-accent-ink shadow-sm' : 'text-app-muted hover:text-app-ink'}"
-          on:click={() => view = "browse"}>All vehicles</button>
+          on:click={showBrowse}>All vehicles</button>
       </nav>
     </div>
   </header>
@@ -62,8 +68,10 @@
       <TreeSearch {vehicleTypes} {initialLoading} />
     {:else if view === "fuzzy"}
       <FuzzySearch {vehicleTypes} {initialLoading} />
-    {:else}
-      <section aria-labelledby="browse-title">
+    {/if}
+
+    {#if browseLoaded}
+      <section aria-labelledby="browse-title" class:hidden={view !== "browse"}>
         <div class="mb-7 max-w-2xl">
           <h2 id="browse-title" class="text-3xl font-bold tracking-tight">Vehicle catalogue</h2>
           <p class="mt-2 text-app-muted">Browse, filter and manage all available DAT vehicle records.</p>
