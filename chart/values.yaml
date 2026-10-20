@@ -1,5 +1,9 @@
 stage: prd
 env: {}
+db:
+  dbClusterName: dat-demo-db
+redis:
+  clusterName: dat-demo
 strapi:
   enabled: false
 gras-deploy:
@@ -70,7 +74,7 @@ grases:
         - name: init-db
           spec:
             name: init-db
-            image: grpl/grpl-dat-demo-data:dev
+            image: grpl/grpl-dat-demo-data:d998817
             imagePullPolicy: Always
             env:
               - name: host
@@ -191,7 +195,7 @@ grases:
               - sh
               - -c
               - |
-                until curl -sf http://krisz-dat-dat-demo-gras-grapi.grpl-krisztian.grapple-demo.com/openapi.json >/dev/null; do
+                until curl -sf http://gras-grapi:3000/openapi.json >/dev/null; do
                   echo "DAT layer one is not available yet"
                   sleep 5
                 done
@@ -208,7 +212,7 @@ grases:
       openapis:
         - name: dsearchtree
           spec:
-            url: http://krisz-dat-dat-demo-gras-grapi.grpl-krisztian.grapple-demo.com/openapi.json
+            url: http://gras-grapi:3000/openapi.json
             prefix: dsearchtree
             client: true
       cacheconfigs:

@@ -23,7 +23,7 @@ type: Opaque
 stringData:
   # KubeBlocks serves the cache in this namespace and owns its password, which
   # reaches the pod through the <release>-redis-account-default secret.
-  host: {{ printf "%s-redis-redis" .Release.Name | quote }}
+  host: {{ printf "%s-redis-redis" .Values.redis.clusterName | quote }}
   port: "6379"
   db: "0"
   MCP_CONFIGS: '{"enable":true}'

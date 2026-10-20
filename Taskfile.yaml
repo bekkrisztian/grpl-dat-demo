@@ -274,7 +274,7 @@ tasks:
           fi
           echo "Resetting grapi injections for ${GRAS_NAME} (${GRAPI_FOLDER})..."
           # Keep declarative fuzzy configuration during resets.
-          GROUPS="injections controllers prerelationpatches postpatches prediscoverypatches prepatches models openapis repositories restcruds serviceproviders services cacheconfigs datasources relations"
+          GROUPS="controllers prerelationpatches postpatches prediscoverypatches prepatches models openapis repositories restcruds serviceproviders services cacheconfigs datasources discoveries relations"
           for group_name in ${GROUPS}; do
             if yq -e ".grases.${GRAS_NAME}.grapi.${group_name}[]" "{{.VALUES_YAML_PATH}}" >/dev/null 2>&1; then
               has_content=$(yq eval ".grases.${GRAS_NAME}.grapi.${group_name}[] | select(has(\"content\")) | .content" "{{.VALUES_YAML_PATH}}" 2>/dev/null | head -n 1)
@@ -356,7 +356,13 @@ tasks:
         # set -o noglob
         BASE_GRAS_FOLDER="grases"
         BASE64=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo "base64"; else echo "base64 -w 0"; fi)
-        SED=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo 'sed -i ".bak"'; else echo "sed -i"; fi)
+        prepend_to_file() {
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "$1" "$2"
+          else
+            sed -i "$1" "$2"
+          fi
+        }
         if [ ! -d "${BASE_GRAS_FOLDER}" ]; then
           echo "No grases folder found, skipping."
           exit 0
@@ -403,8 +409,8 @@ tasks:
             base64_content=$(cat ${file_path} | tr -d '\r' | ${BASE64})
             base64_content_file=./tmpfile_${GRAS_NAME}_${injection_name}
             cat ${file_path} | tr -d '\r' | ${BASE64} > ${base64_content_file}
-            ${SED} "1s/^/content=/" ${base64_content_file}
-            ${SED} "1s/^/name=${injection_name}\n/" ${base64_content_file}
+            prepend_to_file "1s/^/content=/" "${base64_content_file}"
+            prepend_to_file "1s/^/name=${injection_name}\n/" "${base64_content_file}"
             if [ "${file_name}" = "index.ts" ]; then continue; fi
             echo "patching: ${GRAS_NAME}/grapi - ${group_name} - ${injection_name} - ${file_name}"
             # Remove old entry if exists
@@ -421,7 +427,13 @@ tasks:
         # set -o noglob
         BASE_GRAS_FOLDER="grases"
         BASE64=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo "base64"; else echo "base64 -w 0"; fi)
-        SED=$(if [[ "$OSTYPE" == "darwin"* ]]; then echo 'sed -i ".bak"'; else echo "sed -i"; fi)
+        prepend_to_file() {
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "$1" "$2"
+          else
+            sed -i "$1" "$2"
+          fi
+        }
         if [ ! -d "${BASE_GRAS_FOLDER}" ]; then
           echo "No grases folder found, skipping."
           exit 0
@@ -458,8 +470,8 @@ tasks:
               injection_name=$(echo ${file_name} | sed "s,.${file_extension}$,,g")
               base64_content_file=./tmpfile_${GRAS_NAME}_${injection_name}
               cat ${file_path} | tr -d '\r' | ${BASE64} > ${base64_content_file}
-              ${SED} "1s/^/content=/" ${base64_content_file}
-              ${SED} "1s/^/name=${injection_name}\n/" ${base64_content_file}
+              prepend_to_file "1s/^/content=/" "${base64_content_file}"
+              prepend_to_file "1s/^/name=${injection_name}\n/" "${base64_content_file}"
               if [ "${file_name}" = "index.ts" ]; then continue; fi
               echo "patching: ${GRAS_NAME}/gruim - ${cm} - ${injection_name} - ${file_name}"
               yq -i ".grases.${GRAS_NAME}.gruim.${cm} += [load_props(\"${base64_content_file}\")]" "{{.VALUES_YAML_PATH}}"
