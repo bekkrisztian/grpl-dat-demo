@@ -13,6 +13,9 @@ grases:
     grapi:
       ssl: false
       autorestartgruim: false
+      extraSecrets:
+        - dat-layer2-config
+        - grpl-dat-demo-redis-account-default
 
 
 ingress:
