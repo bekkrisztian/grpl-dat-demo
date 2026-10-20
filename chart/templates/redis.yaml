@@ -1,9 +1,9 @@
-{{- if not (lookup "apps.kubeblocks.io/v1" "Cluster" .Release.Namespace .Release.Name) }}
+{{- if not (lookup "apps.kubeblocks.io/v1" "Cluster" .Release.Namespace .Values.redis.clusterName) }}
 ---
 apiVersion: apps.kubeblocks.io/v1
 kind: Cluster
 metadata:
-  name: {{ .Release.Name }}
+  name: {{ .Values.redis.clusterName }}
   annotations:
     helm.sh/resource-policy: keep
 spec:

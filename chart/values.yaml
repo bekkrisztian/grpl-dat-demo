@@ -2,6 +2,8 @@ stage: prd
 env: {}
 db:
   dbClusterName: dat-demo-db
+redis:
+  clusterName: dat-demo
 strapi:
   enabled: false
 gras-deploy:
@@ -72,7 +74,7 @@ grases:
         - name: init-db
           spec:
             name: init-db
-            image: grpl/grpl-dat-demo-data:dev
+            image: grpl/grpl-dat-demo-data:d998817
             imagePullPolicy: Always
             env:
               - name: host
