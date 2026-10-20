@@ -1,12 +1,8 @@
-# explanation
-the grapi (grapple API) is based on loopback.
-you can extend the backend by either using the grapi specification:
-    kubectl explain grapi.spec
+# grapi extensions
 
-or by injections.
+grapi is based on LoopBack. You can configure it through the grapi specification
+(`kubectl explain grapi.spec`) or add source and patch injections under this folder.
 
-injections are usually being injected in form of:
-- controllers:
-    - just add a controller in "./grapi/controllers/*.controller.ts"
-    - it will get picked up by the running grapi and will immediately be processed
+See [INJECTIONS.md](INJECTIONS.md) for every supported injection type, its folder,
+its execution point, and the command that verifies patching and reset behaviour.
 

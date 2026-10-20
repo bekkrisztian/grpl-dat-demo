@@ -26,8 +26,8 @@ grpl-dat-demo/
 │   └── datecode2.sql.gz    # DAT database seed
 ├── grases/
 │   ├── gras/
-│   │   ├── grapi/          # Layer-one controllers and generated-code patches
-│   │   └── gruim/          # gruim bulk-fetch and primary-key patches
+│   │   ├── grapi/          # Layer-one extensions and injection documentation
+│   │   └── gruim/          # Layer-one generated admin module
 │   └── grascache/          # Cache-layer extensions
 ├── src/                    # Svelte vehicle-search application
 ├── tests/                  # Playwright UI tests
@@ -155,29 +155,20 @@ Two changes keep requests away from that ceiling.
 The UI asks for one page at a time. A single vehicle type matches 152,070 rows,
 so the result table pages at 100 and shows the true total beside the range.
 
-gruim's "Select all" and its two export buttons each sent one request with no
-limit. `grases/gras/gruim/prepatches/page-bulk-fetches.sh` rewrites full-record
-exports to walk the table in pages. They stop at the safety ceiling and warn
-that the user must narrow the filter to process the remaining records:
+gruim loads "Select all" and exports in pages instead of sending one unlimited
+request. They stop at the configured safety ceiling and warn that the user must
+narrow the filter to process the remaining records:
 
 | key in `config.global` | default |
 | --- | --- |
 | `fetch-page-size` | 500 |
 | `max-records` | 5000 |
 
-The `z-datecode-primary-key.sh` prepatch maps the table's `dateCode` primary key
-to the `id` expected by gruim actions. "Select all" fetches only these IDs in
-pages, so it can select the complete filtered result without materialising all
-records in grapi. A progress bar shows the loaded and total ID count while this
-runs, and a `Set` keeps checkbox lookups fast with hundreds of thousands of
-selected IDs. The patch also makes the edit form use `dateCode` in its request
-path and excludes the MySQL-generated `globalSearch` column from PATCH payloads.
-
-`task patch-values-file` encodes these prepatches for deployment, while
-`task patch-values-file-patches-only` does the same for `devspace dev`. The
-reset task clears the generated content afterwards, so the committed values
-file stays readable. A patch that cannot find the expected gruim source exits
-non-zero instead of silently leaving unsafe generated code in place.
+"Select all" fetches only the `dateCode` primary keys, so it can select the
+complete filtered result without materialising all records in grapi. A progress
+bar shows the loaded and total ID count. The gruim image also uses `dateCode` in
+record actions and excludes the generated `globalSearch` column from update
+payloads; no project-specific gruim patch is required.
 
 ## Grapple cluster development
 

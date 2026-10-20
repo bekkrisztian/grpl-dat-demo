@@ -1,5 +1,7 @@
 stage: prd
 env: {}
+db:
+  dbClusterName: dat-demo-db
 strapi:
   enabled: false
 gras-deploy:

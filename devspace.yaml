@@ -7,17 +7,17 @@ vars:
   APP_NAME: "dat-demo"
   IMAGE_REGISTRY: "grpl"
   IMAGE_REPO: "grpl-dat-demo"
-  
+
   APP_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}"
   TEST_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}-test"
   DATA_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}-data"
   MODULES_IMAGE: "${IMAGE_REGISTRY}/${IMAGE_REPO}-modules"
-  
+
   APP_DOCKERFILE: "Dockerfile"
   TEST_DOCKERFILE: "Dockerfile.test"
   DATA_DOCKERFILE: "Dockerfile.data"
   MODULES_DOCKERFILE: "Dockerfile.modules"
-  
+
   # here you need to define the images to build and their coresponding dockerfiles
   IMAGES: "${APP_IMAGE}:${TAG} ${TEST_IMAGE}:${TAG} ${MODULES_IMAGE}:${TAG} ${DATA_IMAGE}:${TAG}"
   DOCKERFILES: "${APP_DOCKERFILE} ${TEST_DOCKERFILE} ${MODULES_DOCKERFILE} ${DATA_DOCKERFILE}"
@@ -204,6 +204,21 @@ dev:
     sync:
       # - path: ./grapi/controllers/:/home/node/app/src/controllers/
       - path: ./grases/gras/grapi/injections/:/home/node/app/src/injections/
+      - path: ./grases/gras/grapi/modules/:/opt/custom-modules/
+        excludePaths:
+          - "**/node_modules/"
+          - "**/index.js"
+          - "**/index.d.ts"
+          - "**/package.json"
+          - "**/package-lock.json"
+        onUpload:
+          exec:
+            - command: bash
+              args:
+                - -c
+                - |
+                  ./scripts/07.5-install-modules.sh
+                  pkill -f "node ." || true
     # restartHelper:
     #   inject: true
     #   path: "export DEV=true && ./start.sh"
